@@ -1,0 +1,344 @@
+import AccountStep from '@/components/onboarding/AccountStep';
+import GoalsStep from '@/components/onboarding/GoalsStep';
+import NameStep from '@/components/onboarding/NameStep';
+import PreferencesStep from '@/components/onboarding/PreferencesStep';
+import ProgressIndicator from '@/components/onboarding/ProgressIndicator';
+import StrugglesStep from '@/components/onboarding/StrugglesStep';
+import WelcomeStep from '@/components/onboarding/WelcomeStep';
+import { theme } from '@/constants/theme';
+import { useApp } from '@/contexts/AppContext';
+import {
+  authActions,
+  useAppDispatch,
+  usePostApiAuthRegisterMutation,
+  usePostApiOauthGoogleMutation,
+  usePostApiOauthAppleMutation,
+} from '@/lib/redux';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const TOTAL_STEPS = 6;
+
+export default function OnboardingScreen() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { setUserProfile } = useApp();
+  const [register, { isLoading: isRegistering }] = usePostApiAuthRegisterMutation();
+  const [googleAuth, { isLoading: isGoogleAuthenticating }] = usePostApiOauthGoogleMutation();
+  const [appleAuth, { isLoading: isAppleAuthenticating }] = usePostApiOauthAppleMutation();
+
+  const [step, setStep] = useState(0);
+  const [email, setEmail] = useState('');
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [communicationMode, setCommunicationMode] = useState<'text' | 'voice'>('text');
+  const [reminderTone, setReminderTone] = useState<'gentle' | 'firm' | 'motivational'>('gentle');
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [selectedStruggles, setSelectedStruggles] = useState<string[]>([]);
+
+  const handleGoalToggle = (goal: string) => {
+    setSelectedGoals((prev) =>
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+    );
+  };
+
+  const handleStruggleToggle = (struggle: string) => {
+    setSelectedStruggles((prev) =>
+      prev.includes(struggle)
+        ? prev.filter((s) => s !== struggle)
+        : [...prev, struggle]
+    );
+  };
+
+  const handleOAuthSuccess = (result: any) => {
+    // Save token and user to Redux auth state
+    if (result.user && result.token) {
+      dispatch(
+        authActions.loginSuccess({
+          user: {
+            id: result.user.id!,
+            email: result.user.email!,
+            name: result.user.name!,
+            points: result.user.points || 0,
+            streak: result.user.streak || 0,
+            goals: result.user.goals || [],
+            struggles: result.user.struggles || [],
+            communicationMode: result.user.communicationMode || 'text',
+            reminderTone: result.user.reminderTone || 'gentle',
+          },
+          token: result.token,
+        })
+      );
+
+      // Update AppContext
+      setUserProfile({
+        name: result.user.name!,
+        goals: result.user.goals || [],
+        struggles: result.user.struggles || [],
+        communicationMode: result.user.communicationMode || 'text',
+        reminderTone: result.user.reminderTone || 'gentle',
+      });
+
+      // If new user or incomplete profile, continue onboarding
+      // Otherwise go straight to dashboard
+      if (result.isNewUser || !result.user.name || result.user.goals?.length === 0) {
+        setIsOAuthUser(true);
+        setName(result.user.name || '');
+        setEmail(result.user.email || '');
+        // Skip to name step if name is missing, otherwise skip to preferences
+        setStep(result.user.name ? 3 : 2);
+      } else {
+        router.replace('/dashboard');
+      }
+    }
+  };
+
+  const handleGoogleSignIn = async (accessToken: string, idToken: string) => {
+    try {
+      const result = await googleAuth({
+        body: { idToken },
+      }).unwrap();
+      handleOAuthSuccess(result);
+    } catch (error: any) {
+      console.error('Google auth error:', error);
+      const errorMessage =
+        error?.data?.message ||
+        error?.message ||
+        'Failed to sign in with Google. Please try again.';
+      Alert.alert('Google Sign In Failed', errorMessage);
+    }
+  };
+
+  const handleAppleSignIn = async (identityToken: string, user?: any) => {
+    try {
+      const result = await appleAuth({
+        body: { identityToken, user },
+      }).unwrap();
+      handleOAuthSuccess(result);
+    } catch (error: any) {
+      console.error('Apple auth error:', error);
+      const errorMessage =
+        error?.data?.message ||
+        error?.message ||
+        'Failed to sign in with Apple. Please try again.';
+      Alert.alert('Apple Sign In Failed', errorMessage);
+    }
+  };
+
+  const handleComplete = async () => {
+    try {
+      const result = await register({
+        registerRequest: {
+          email,
+          password,
+          name,
+          goals: selectedGoals,
+          struggles: selectedStruggles,
+          communicationMode,
+          reminderTone,
+        },
+      }).unwrap();
+
+      // Save token and user to Redux auth state
+      if (result.user && result.token) {
+        dispatch(
+          authActions.loginSuccess({
+            user: {
+              id: result.user.id!,
+              email: result.user.email!,
+              name: result.user.name!,
+              points: result.user.points || 0,
+              streak: result.user.streak || 0,
+              goals: result.user.goals || [],
+              struggles: result.user.struggles || [],
+              communicationMode: result.user.communicationMode || 'text',
+              reminderTone: result.user.reminderTone || 'gentle',
+            },
+            token: result.token,
+          })
+        );
+      }
+
+      // Also update AppContext for backwards compatibility
+      setUserProfile({
+        name,
+        goals: selectedGoals,
+        struggles: selectedStruggles,
+        communicationMode,
+        reminderTone,
+      });
+
+      router.replace('/dashboard');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+
+      const errorMessage =
+        error?.data?.message ||
+        error?.message ||
+        'Failed to create account. Please try again.';
+
+      Alert.alert('Registration Failed', errorMessage);
+    }
+  };
+
+  const canContinue = () => {
+    if (step === 1) {
+      // Email and password validation (or skip if OAuth user)
+      return (
+        isOAuthUser ||
+        (email.trim().length > 0 &&
+          email.includes('@') &&
+          password.length >= 6)
+      );
+    }
+    if (step === 2) return name.trim().length > 0;
+    return true;
+  };
+
+  const handleNext = () => {
+    if (step < TOTAL_STEPS - 1) {
+      setStep(step + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return <WelcomeStep />;
+      case 1:
+        return (
+          <AccountStep
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            onGoogleSuccess={handleGoogleSignIn}
+            onAppleSuccess={handleAppleSignIn}
+          />
+        );
+      case 2:
+        return <NameStep name={name} setName={setName} />;
+      case 3:
+        return (
+          <PreferencesStep
+            communicationMode={communicationMode}
+            setCommunicationMode={setCommunicationMode}
+            reminderTone={reminderTone}
+            setReminderTone={setReminderTone}
+          />
+        );
+      case 4:
+        return (
+          <GoalsStep
+            selectedGoals={selectedGoals}
+            onToggleGoal={handleGoalToggle}
+          />
+        );
+      case 5:
+        return (
+          <StrugglesStep
+            selectedStruggles={selectedStruggles}
+            onToggleStruggle={handleStruggleToggle}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.gradient}>
+        <ProgressIndicator
+          currentStep={step}
+          totalSteps={TOTAL_STEPS}
+          onBack={() => setStep(step - 1)}
+          canGoBack={step > 0}
+        />
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {renderStep()}
+        </ScrollView>
+
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={!canContinue() || isRegistering || isGoogleAuthenticating || isAppleAuthenticating}
+            style={[
+              styles.button,
+              (!canContinue() || isRegistering || isGoogleAuthenticating || isAppleAuthenticating) && styles.buttonDisabled,
+            ]}>
+            <View style={styles.buttonGradient}>
+              {(isRegistering || isGoogleAuthenticating || isAppleAuthenticating) ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>
+                    {step === TOTAL_STEPS - 1 ? "Let's get started" : 'Continue'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color="#fff" />
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  gradient: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xl,
+  },
+  bottomContainer: {
+    padding: theme.spacing.lg,
+  },
+  button: {
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  buttonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

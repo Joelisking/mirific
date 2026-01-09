@@ -1,50 +1,110 @@
-# Welcome to your Expo app 👋
+# Mirific - AI-Powered Productivity Coach
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is a React Native app built with Expo that helps users achieve their goals through AI-powered coaching, habit tracking, and accountability features.
 
-## Get started
+## Overview
 
-1. Install dependencies
+Mirific has been converted from a React web prototype to a fully functional React Native mobile app. The app includes:
+
+- **Onboarding Flow**: Personalized setup to understand user goals and challenges
+- **Dashboard**: Overview of daily habits, active goals, and progress tracking
+- **AI Coach Chat**: Conversational interface to set and discuss goals
+- **Goal Management**: Create commitments, track progress, and check in regularly
+- **Rewards System**: Points and achievements for staying consistent
+- **Timeline View**: Visual progress tracking for all goals
+- **Settings**: Manage preferences and profile information
+
+## Get Started
+
+1. **Install dependencies**
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. **Start the app**
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. **Run on device/emulator**
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   - Press `i` for iOS simulator
+   - Press `a` for Android emulator
+   - Scan QR code with Expo Go app for physical device
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## App Structure
 
-## Get a fresh project
+### Screens
 
-When you're ready, run:
+- **`/onboarding`** - Welcome flow to capture user preferences
+- **`/dashboard`** - Main home screen with habits and goals overview
+- **`/chat`** - AI coach conversation interface
+- **`/commitment`** - Goal confirmation and deadline setting
+- **`/timeline`** - All goals with progress tracking
+- **`/checkin`** - Update progress or mark goals complete
+- **`/rewards`** - Points, streaks, and achievements
+- **`/settings`** - User preferences and profile
 
-```bash
-npm run reset-project
-```
+### Key Files
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- **`contexts/AppContext.tsx`** - Global state management for goals, habits, and user data
+- **`types/index.ts`** - TypeScript interfaces for app data models
+- **`app/_layout.tsx`** - Root navigation configuration
 
-## Learn more
+## Features
 
-To learn more about developing your project with Expo, look at the following resources:
+### Goal Setting & Tracking
+- Natural conversation flow for creating goals
+- Deadline management with flexibility to adjust
+- Progress tracking with visual indicators
+- Status updates (on-track, at-risk, completed)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Habit Management
+- Daily habit tracking with emoji icons
+- Streak counting for motivation
+- Reminder time settings
+- Quick completion toggle
 
-## Join the community
+### Gamification
+- Points system for completing tasks
+- Achievement badges
+- Daily streak tracking
+- Visual progress indicators
 
-Join our community of developers creating universal apps.
+### User Experience
+- Clean, mobile-friendly interface
+- Smooth navigation between screens
+- Encouraging, supportive messaging
+- Flexible deadline adjustments
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Technologies Used
+
+- **React Native** - Cross-platform mobile framework
+- **Expo** - Development platform and tooling
+- **Expo Router** - File-based navigation
+- **TypeScript** - Type-safe development
+- **React Context API** - State management
+- **Ionicons** - Icon library
+
+## Development Notes
+
+This app was converted from a Vite React web app with shadcn/ui components to React Native. The conversion includes:
+
+- Native components replacing web HTML elements
+- Touch-optimized interactions
+- Mobile-friendly layouts and navigation
+- React Native StyleSheet for styling
+- Context-based state management instead of prop drilling
+
+## Next Steps
+
+To enhance the app further, consider:
+
+1. Backend integration for data persistence
+2. Push notifications for reminders
+3. Calendar integration
+4. Social features (share progress, compete with friends)
+5. Voice input for goal setting
+6. Advanced analytics and insights
