@@ -1,7 +1,6 @@
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
-import { useAuth } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import {
     ScrollView,
@@ -17,13 +16,14 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { userProfile } = useApp();
   const { signOut } = useAuth();
+  const { user } = useUser();
+
+  // Use Clerk user data as fallback
+  const displayName = userProfile.name || user?.fullName || user?.firstName || 'User';
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
@@ -33,7 +33,7 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <View style={styles.profileRow}>
               <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>{userProfile.name}</Text>
+              <Text style={styles.value}>{displayName}</Text>
             </View>
           </View>
         </View>

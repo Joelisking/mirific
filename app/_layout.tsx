@@ -34,13 +34,12 @@ function AppContent() {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="onboarding" />
-            <Stack.Screen name="dashboard" />
-            <Stack.Screen name="chat" />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="create-goal" />
             <Stack.Screen name="commitment" />
-            <Stack.Screen name="timeline" />
             <Stack.Screen name="checkin" />
             <Stack.Screen name="rewards" />
-            <Stack.Screen name="settings" />
+            <Stack.Screen name="+not-found" />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

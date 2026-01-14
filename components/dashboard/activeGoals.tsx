@@ -4,10 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface ActiveGoalsProps {
@@ -33,7 +33,7 @@ const ActiveGoals = ({ setShowQuickActions }: ActiveGoalsProps) => {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>Active Goals</Text>
-        <TouchableOpacity onPress={() => router.push('/timeline')}>
+        <TouchableOpacity onPress={() => router.push('/progress')}>
           <Text style={styles.addButton}>View all</Text>
         </TouchableOpacity>
       </View>

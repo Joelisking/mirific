@@ -1,7 +1,7 @@
-import { Redirect } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
-import { View, ActivityIndicator } from 'react-native';
 import { theme } from '@/constants/theme';
+import { useAuth } from '@clerk/clerk-expo';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -17,7 +17,7 @@ export default function Index() {
   // If signed in, check if onboarding is complete
   // For now, send all authenticated users to dashboard
   if (isSignedIn) {
-    return <Redirect href="/dashboard" />;
+    return <Redirect href="/home" />;
   }
 
   // Not signed in, go to onboarding

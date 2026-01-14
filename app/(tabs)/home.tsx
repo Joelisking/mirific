@@ -7,17 +7,19 @@ import DashboardStatsBar from '@/components/dashboard/statsBar';
 import { theme } from '@/constants/theme';
 import { usePostApiHabitsMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,15 +30,26 @@ export default function DashboardScreen() {
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('✨');
+  const [reminderTime, setReminderTime] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const quickActions = [
     {
-      id: 'goal',
-      label: 'Set a new goal',
+      id: 'goal-ai',
+      label: 'Set a goal with AI',
+      emoji: '🤖',
+      action: () => {
+        setShowQuickActions(false);
+        router.push('/coach');
+      },
+    },
+    {
+      id: 'goal-manual',
+      label: 'Create goal manually',
       emoji: '🎯',
       action: () => {
         setShowQuickActions(false);
-        router.push('/chat');
+        router.push('/create-goal');
       },
     },
     {
@@ -54,7 +67,7 @@ export default function DashboardScreen() {
       emoji: '💬',
       action: () => {
         setShowQuickActions(false);
-        router.push('/chat');
+        router.push('/coach');
       },
     },
     {
@@ -83,6 +96,17 @@ export default function DashboardScreen() {
     '💻',
   ];
 
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  const handleTimeChange = (event: any, selectedTime?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setReminderTime(selectedTime);
+    }
+  };
+
   const handleAddHabit = async () => {
     if (newHabitName.trim()) {
       try {
@@ -91,12 +115,13 @@ export default function DashboardScreen() {
             name: newHabitName,
             emoji: newHabitEmoji,
             frequency: 'daily',
-            reminderTime: '09:00',
+            reminderTime: formatTime(reminderTime),
           },
         }).unwrap();
 
         setNewHabitName('');
         setNewHabitEmoji('✨');
+        setReminderTime(new Date());
         setShowAddHabit(false);
       } catch (error) {
         Alert.alert('Error', 'Failed to create habit. Please try again.');
@@ -190,7 +215,7 @@ export default function DashboardScreen() {
               style={styles.coachButton}
               onPress={() => {
                 setShowQuickActions(false);
-                router.push('/chat');
+                router.push('/coach');
               }}>
               <Ionicons name="mic" size={20} color="#fff" />
               <Text style={styles.coachButtonText}>
@@ -252,6 +277,26 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+              </View>
+
+              <View>
+                <Text style={styles.inputLabel}>Reminder time</Text>
+                <TouchableOpacity
+                  style={styles.timePickerButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Ionicons name="time-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={styles.timePickerText}>{formatTime(reminderTime)}</Text>
+                </TouchableOpacity>
+                
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={reminderTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleTimeChange}
+                  />
+                )}
               </View>
             </View>
 
@@ -483,7 +528,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 32,
+    bottom: 100,
     right: 32,
     width: 56,
     height: 56,
@@ -619,6 +664,20 @@ const styles = StyleSheet.create({
   },
   emojiText: {
     fontSize: 24,
+  },
+  timePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: 12,
+  },
+  timePickerText: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
   },
   addHabitButton: {
     backgroundColor: theme.colors.primary,
