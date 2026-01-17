@@ -1,38 +1,28 @@
 import ActiveGoals from '@/components/dashboard/activeGoals';
+import AddHabitSheet from '@/components/dashboard/AddHabitSheet';
 import DashboardWeeklyCalendar from '@/components/dashboard/calendar';
 import DailyHabits from '@/components/dashboard/dailyHabits';
 import DashboardDailyFocus from '@/components/dashboard/focus';
 import DashbordHeader from '@/components/dashboard/header';
 import DashboardStatsBar from '@/components/dashboard/statsBar';
 import { theme } from '@/constants/theme';
-import { usePostApiHabitsMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const [createHabit, { isLoading: isCreatingHabit }] = usePostApiHabitsMutation();
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showAddHabit, setShowAddHabit] = useState(false);
-  const [newHabitName, setNewHabitName] = useState('');
-  const [newHabitEmoji, setNewHabitEmoji] = useState('✨');
-  const [reminderTime, setReminderTime] = useState(new Date());
-  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const quickActions = [
     {
@@ -81,55 +71,6 @@ export default function DashboardScreen() {
       },
     },
   ];
-
-  const emojiOptions = [
-    '✨',
-    '💪',
-    '📚',
-    '🏃',
-    '🧘',
-    '🎨',
-    '💧',
-    '🥗',
-    '😴',
-    '🎵',
-    '📝',
-    '💻',
-  ];
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
-
-  const handleTimeChange = (event: any, selectedTime?: Date) => {
-    setShowTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
-      setReminderTime(selectedTime);
-    }
-  };
-
-  const handleAddHabit = async () => {
-    if (newHabitName.trim()) {
-      try {
-        await createHabit({
-          createHabitRequest: {
-            name: newHabitName,
-            emoji: newHabitEmoji,
-            frequency: 'daily',
-            reminderTime: formatTime(reminderTime),
-          },
-        }).unwrap();
-
-        setNewHabitName('');
-        setNewHabitEmoji('✨');
-        setReminderTime(new Date());
-        setShowAddHabit(false);
-      } catch (error) {
-        Alert.alert('Error', 'Failed to create habit. Please try again.');
-        console.error('Failed to create habit:', error);
-      }
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -180,7 +121,7 @@ export default function DashboardScreen() {
                 <Ionicons
                   name="sparkles"
                   size={24}
-                  color="theme.colors.accent"
+                  color={theme.colors.accent}
                 />
                 <Text style={styles.modalTitle}>
                   What would you like to do?
@@ -191,7 +132,7 @@ export default function DashboardScreen() {
                 <Ionicons
                   name="close"
                   size={24}
-                  color="theme.colors.textSecondary"
+                  color={theme.colors.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -227,107 +168,11 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Add Habit Modal */}
-        <Modal
-        visible={showAddHabit}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddHabit(false)}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-          style={styles.habitModalOverlay}
-        >
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setShowAddHabit(false)}
-            style={StyleSheet.absoluteFill} 
-          />
-          <View style={styles.habitModalContent}>
-            <View style={styles.habitModalHeader}>
-              <Text style={styles.habitModalTitle}>
-                Add New Habit
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowAddHabit(false)}>
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.habitForm}>
-              <View>
-                <Text style={styles.inputLabel}>Habit name</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={newHabitName}
-                  onChangeText={setNewHabitName}
-                  placeholder="e.g., Morning meditation"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  autoFocus
-                />
-              </View>
-
-              <View>
-                <Text style={styles.inputLabel}>Pick an emoji</Text>
-                <View style={styles.emojiGrid}>
-                  {emojiOptions.map((emoji) => (
-                    <TouchableOpacity
-                      key={emoji}
-                      onPress={() => setNewHabitEmoji(emoji)}
-                      style={[
-                        styles.emojiOption,
-                        newHabitEmoji === emoji &&
-                          styles.emojiOptionSelected,
-                      ]}>
-                      <Text style={styles.emojiText}>{emoji}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View>
-                <Text style={styles.inputLabel}>Reminder time</Text>
-                <TouchableOpacity
-                  style={styles.timePickerButton}
-                  onPress={() => setShowTimePicker(!showTimePicker)}
-                >
-                  <Ionicons name="time-outline" size={20} color={theme.colors.textSecondary} />
-                  <Text style={styles.timePickerText}>{formatTime(reminderTime)}</Text>
-                </TouchableOpacity>
-                
-                {showTimePicker && (
-                 <View style={{ alignItems: 'center', marginTop: 8 }}>
-                  <DateTimePicker
-                    value={reminderTime}
-                    mode="time"
-                    display="spinner"
-                    themeVariant="dark"
-                    onChange={handleTimeChange}
-                    textColor="white"
-                    style={{ height: 120, width: '100%' }}
-                  />
-                 </View>
-                )}
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleAddHabit}
-              disabled={!newHabitName.trim() || isCreatingHabit}
-              style={[
-                styles.addHabitButton,
-                (!newHabitName.trim() || isCreatingHabit) && styles.addHabitButtonDisabled,
-              ]}>
-              <Text style={styles.addHabitButtonText}>
-                {isCreatingHabit ? 'Creating...' : 'Add Habit'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      {/* Add Habit Sheet */}
+      <AddHabitSheet 
+        visible={showAddHabit} 
+        onClose={() => setShowAddHabit(false)} 
+      />
     </SafeAreaView>
   );
 }
@@ -365,7 +210,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     fontSize: 14,
-    color: 'theme.colors.accent',
+    color: theme.colors.accent,
   },
   weekDays: {
     flexDirection: 'row',
@@ -401,7 +246,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     borderWidth: 2,
-    borderColor: 'theme.colors.accent',
+    borderColor: theme.colors.accent,
   },
   goalsList: {
     gap: 8,
@@ -428,7 +273,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   goalBadge: {
-    backgroundColor: 'theme.colors.surfaceElevated',
+    backgroundColor: theme.colors.surfaceElevated,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -438,10 +283,10 @@ const styles = StyleSheet.create({
   },
   goalBadgeText: {
     fontSize: 12,
-    color: 'theme.colors.success',
+    color: theme.colors.success,
   },
   goalBadgeTextRisk: {
-    color: 'theme.colors.primary',
+    color: theme.colors.primary,
   },
   habitsList: {
     gap: 12,
@@ -464,7 +309,7 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: {
     backgroundColor: theme.colors.primary,
-    borderColor: 'theme.colors.primary',
+    borderColor: theme.colors.primary,
   },
   habitEmoji: {
     fontSize: 18,
@@ -489,7 +334,7 @@ const styles = StyleSheet.create({
   },
   habitStreakNumber: {
     fontSize: 12,
-    color: 'theme.colors.warning',
+    color: theme.colors.warning,
   },
   habitStreakEmoji: {
     fontSize: 14,
@@ -518,13 +363,13 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    backgroundColor: 'theme.colors.border',
+    backgroundColor: theme.colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: 'theme.colors.accent',
+    backgroundColor: theme.colors.accent,
     borderRadius: 3,
   },
   emptyState: {
@@ -590,7 +435,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: 'theme.colors.surfaceElevated',
+    backgroundColor: theme.colors.surfaceElevated,
     borderRadius: 16,
     padding: 16,
   },
@@ -611,99 +456,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   coachButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  habitModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    paddingTop: 60, // Add top padding to prevent content from hitting status bar
-  },
-  habitModalContent: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 24,
-    gap: 16,
-  },
-  habitModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  habitModalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  habitForm: {
-    gap: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-  },
-  emojiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  emojiOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiOptionSelected: {
-    backgroundColor: theme.colors.background,
-    borderColor: 'theme.colors.accent',
-  },
-  emojiText: {
-    fontSize: 24,
-  },
-  timePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-  },
-  timePickerText: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-  },
-  addHabitButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-  },
-  addHabitButtonDisabled: {
-    opacity: 0.5,
-  },
-  addHabitButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
