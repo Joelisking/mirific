@@ -24,9 +24,25 @@ export default function DashboardScreen() {
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [sheetInitialType, setSheetInitialType] = useState<'habit' | 'goal'>('habit');
+  const [sheetInitialValues, setSheetInitialValues] = useState<any>(undefined);
+  const [sheetInitialId, setSheetInitialId] = useState<string | undefined>(undefined);
 
   const openAddSheet = (type: 'habit' | 'goal') => {
     setSheetInitialType(type);
+    setSheetInitialValues(undefined);
+    setSheetInitialId(undefined);
+    setShowAddHabit(true);
+  };
+
+  const openEditHabit = (habit: any) => {
+    setSheetInitialType('habit');
+    setSheetInitialId(habit.id);
+    setSheetInitialValues({
+      name: habit.name,
+      emoji: habit.emoji,
+      frequency: habit.frequency,
+      reminderTime: habit.reminderTime ? new Date('2024-01-01 ' + habit.reminderTime) : new Date(), // naive parse
+    });
     setShowAddHabit(true);
   };
 
@@ -98,7 +114,10 @@ export default function DashboardScreen() {
         <DashboardDailyFocus onAddGoal={() => openAddSheet('goal')} />
 
         {/* Daily Habits */}
-        <DailyHabits setShowAddHabit={(show) => show ? openAddSheet('habit') : setShowAddHabit(false)} />
+        <DailyHabits
+          setShowAddHabit={(show) => show ? openAddSheet('habit') : setShowAddHabit(false)}
+          onEditHabit={openEditHabit}
+        />
 
         {/* Active Goals */}
         <ActiveGoals
@@ -182,6 +201,8 @@ export default function DashboardScreen() {
         visible={showAddHabit}
         onClose={() => setShowAddHabit(false)}
         initialType={sheetInitialType}
+        initialValues={sheetInitialValues}
+        initialId={sheetInitialId}
       />
     </SafeAreaView>
   );

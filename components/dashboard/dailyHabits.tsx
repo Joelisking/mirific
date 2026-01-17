@@ -1,32 +1,82 @@
 import { theme } from '@/constants/theme';
 import {
+  useDeleteApiHabitsByIdMutation,
   useGetApiHabitsQuery,
   usePatchApiHabitsByIdMutation,
 } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 
 interface DailyHabitsProps {
   setShowAddHabit: (show: boolean) => void;
+  onEditHabit: (habit: any) => void;
 }
 
-function DailyHabits({ setShowAddHabit }: DailyHabitsProps) {
+function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
   const { data: habits, isLoading, error } = useGetApiHabitsQuery();
   const [toggleHabit] = usePatchApiHabitsByIdMutation();
-  console.log(habits);
+  const [deleteHabit] = useDeleteApiHabitsByIdMutation();
+
   const handleToggle = async (habitId: string) => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await toggleHabit({ id: habitId }).unwrap();
     } catch (err) {
       console.error('Failed to toggle habit:', err);
     }
+  };
+
+  const handleDelete = (habitId: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert(
+      "Delete Habit",
+      "Are you sure you want to stop tracking this habit?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteHabit({ id: habitId }).unwrap();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (e) {
+              console.error("Failed to delete", e);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const RightAction = ({ prog, drag, onDelete }: any) => {
+    const styleAnimation = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateX: drag.value + 60 }],
+      };
+    });
+
+    return (
+      <Reanimated.View style={styleAnimation}>
+        <View style={styles.rightActions}>
+          <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={onDelete}>
+            <Ionicons name="trash" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Reanimated.View>
+    );
   };
 
   if (isLoading) {
@@ -69,43 +119,69 @@ function DailyHabits({ setShowAddHabit }: DailyHabitsProps) {
       <View style={styles.habitsList}>
         {habits && habits.length > 0 ? (
           habits.map((habit) => (
-            <TouchableOpacity
+            <ReanimatedSwipeable
               key={habit.id}
-              style={styles.habitItem}
-              onPress={() => handleToggle(habit.id!)}>
-              <View
-                style={[
-                  styles.checkbox,
-                  habit.completedToday && styles.checkboxChecked,
-                ]}>
-                {habit.completedToday && (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                )}
-              </View>
-              <Text style={styles.habitEmoji}>{habit.emoji}</Text>
-              <View style={styles.habitContent}>
-                <Text
-                  style={[
-                    styles.habitName,
-                    habit.completedToday && styles.habitNameCompleted,
-                  ]}>
-                  {habit.name}
-                </Text>
-                {habit.reminderTime && (
-                  <Text style={styles.habitTime}>
-                    {habit.reminderTime}
-                  </Text>
-                )}
-              </View>
-              {habit.streak! > 0 && (
-                <View style={styles.habitStreak}>
-                  <Text style={styles.habitStreakNumber}>
-                    {habit.streak}
-                  </Text>
-                  <Text style={styles.habitStreakEmoji}>🔥</Text>
-                </View>
+              friction={2}
+              enableTrackpadTwoFingerGesture
+              rightThreshold={40}
+              renderRightActions={(prog, drag) => (
+                <RightAction prog={prog} drag={drag} onDelete={() => handleDelete(habit.id!)} />
               )}
-            </TouchableOpacity>
+            >
+              <Pressable
+                style={({ pressed }) => [
+                  styles.habitItem,
+                  pressed && { opacity: 0.7 }
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  onEditHabit(habit);
+                }}
+                delayLongPress={500}
+              >
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation(); // Prevent opening edit sheet
+                    handleToggle(habit.id!);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      habit.completedToday && styles.checkboxChecked,
+                    ]}
+                  >
+                    {habit.completedToday && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.habitEmoji}>{habit.emoji}</Text>
+                <View style={styles.habitContent}>
+                  <Text
+                    style={[
+                      styles.habitName,
+                      habit.completedToday && styles.habitNameCompleted,
+                    ]}>
+                    {habit.name}
+                  </Text>
+                  {habit.reminderTime && (
+                    <Text style={styles.habitTime}>
+                      {habit.reminderTime}
+                    </Text>
+                  )}
+                </View>
+                {habit.streak! > 0 && (
+                  <View style={styles.habitStreak}>
+                    <Text style={styles.habitStreakNumber}>
+                      {habit.streak}
+                    </Text>
+                    <Text style={styles.habitStreakEmoji}>🔥</Text>
+                  </View>
+                )}
+              </Pressable>
+            </ReanimatedSwipeable>
           ))
         ) : (
           <View style={styles.emptyState}>
@@ -498,5 +574,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+  },
+  rightActions: {
+    width: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteBtn: {
+    backgroundColor: '#ef4444', // Red
   },
 });

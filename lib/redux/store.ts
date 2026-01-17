@@ -1,30 +1,32 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import {
-  persistStore,
-  persistReducer,
-  FLUSH,
-  REHYDRATE,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
+    FLUSH,
+    PAUSE,
+    PERSIST,
+    persistReducer,
+    persistStore,
+    PURGE,
+    REGISTER,
+    REHYDRATE,
 } from 'redux-persist';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import authReducer from './slices/authSlice';
 import { api } from './api';
+import authReducer from './slices/authSlice';
+import chatReducer from './slices/chatSlice';
 
 // Persist config
 const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: ['auth'], // Only persist auth slice
+  whitelist: ['auth', 'chat'], // Persist auth and chat
 };
 
 // Combine reducers
 const rootReducer = combineReducers({
   auth: authReducer,
+  chat: chatReducer,
   [api.reducerPath]: api.reducer,
 });
 
