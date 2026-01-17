@@ -1,5 +1,5 @@
 import { theme } from '@/constants/theme';
-import { usePostApiHabitsMutation } from '@/lib/redux';
+import { usePostApiGoalsMutation, usePostApiHabitsMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useRef, useState } from 'react';
@@ -25,12 +25,17 @@ interface AddHabitSheetProps {
 
 export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) {
   const [createHabit, { isLoading: isCreatingHabit }] = usePostApiHabitsMutation();
+  const [createGoal, { isLoading: isCreatingGoal }] = usePostApiGoalsMutation();
 
   // Form State
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🛡️');
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
   const [reminderTime, setReminderTime] = useState(new Date());
+
+  // Goal State
+  const [deadline, setDeadline] = useState(new Date());
+
   const [isCantMiss, setIsCantMiss] = useState(false);
   const [type, setType] = useState<'habit' | 'goal'>('habit');
 
@@ -38,6 +43,7 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
   const nameInputRef = useRef<TextInput>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setIsKeyboardVisible(true));
@@ -57,7 +63,9 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
       setReminderTime(new Date());
       setReminderTime(new Date());
       setReminderTime(new Date());
+      setDeadline(new Date());
       setShowTimePicker(false);
+      setShowDeadlinePicker(false);
       // Auto-focus logic handled by autoFocus prop or effect? 
       // Let's rely on autoFocus prop for initial open, or imperative focus
       setTimeout(() => nameInputRef.current?.focus(), 100);
@@ -68,32 +76,56 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   const handleTimeChange = (event: any, selectedTime?: Date) => {
     if (Platform.OS === 'android') {
-      // Android picker is modal, so we don't need to do anything special regarding layout
+      // Android picker is modal
     }
     if (selectedTime) {
       setReminderTime(selectedTime);
     }
   };
 
-  const handleAddHabit = async () => {
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDeadlinePicker(false);
+    }
+    if (selectedDate) {
+      setDeadline(selectedDate);
+    }
+  };
+
+  const handleAdd = async () => {
     if (!name.trim()) return;
 
     try {
-      await createHabit({
-        createHabitRequest: {
-          name: name,
-          emoji: emoji,
-          frequency: frequency,
-          reminderTime: formatTime(reminderTime),
-        },
-      }).unwrap();
+      if (type === 'habit') {
+        await createHabit({
+          createHabitRequest: {
+            name: name,
+            emoji: emoji,
+            frequency: frequency,
+            reminderTime: formatTime(reminderTime),
+          },
+        }).unwrap();
+      } else {
+        await createGoal({
+          createGoalRequest: {
+            text: name,
+            deadline: deadline.toISOString().split('T')[0], // YYYY-MM-DD
+            status: 'on-track',
+            progress: 0,
+          }
+        }).unwrap();
+      }
 
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create habit. Please try again.');
-      console.error('Failed to create habit:', error);
+      Alert.alert('Error', `Failed to create ${type}. Please try again.`);
+      console.error(`Failed to create ${type}:`, error);
     }
   };
 
@@ -142,10 +174,28 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
           <View style={styles.sheet}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Habit</Text>
+              <Text style={styles.title}>{type === 'habit' ? 'New Habit' : 'New Goal'}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
+            </View>
+
+            {/* Type Toggle */}
+            <View style={{ alignItems: 'center' }}>
+              <View style={styles.typeToggle}>
+                <TouchableOpacity
+                  style={[styles.typeOption, type === 'habit' && styles.typeOptionActive]}
+                  onPress={() => setType('habit')}
+                >
+                  <Text style={[styles.typeText, type === 'habit' && styles.typeTextActive]}>Habit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeOption, type === 'goal' && styles.typeOptionActive]}
+                  onPress={() => setType('goal')}
+                >
+                  <Text style={[styles.typeText, type === 'goal' && styles.typeTextActive]}>Goal</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Main Input Row */}
@@ -176,82 +226,74 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
               {/* Schedule Summary Pill */}
               <TouchableOpacity onPress={toggleKeyboard} style={styles.schedulePill}>
                 <Text style={styles.scheduleText}>
-                  {frequency === 'daily' ? 'Daily' : 'Weekly'}, {formatTime(reminderTime)}
+                  {type === 'habit'
+                    ? `${frequency === 'daily' ? 'Daily' : 'Weekly'}, ${formatTime(reminderTime)}`
+                    : `By ${formatDate(deadline)}`
+                  }
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Controls Row */}
-            {/* <View style={styles.controlsRow}>
-              Type Toggle
-              <View style={styles.typeToggle}>
-                <TouchableOpacity
-                  style={[styles.typeOption, type === 'habit' && styles.typeOptionActive]}
-                  onPress={() => setType('habit')}
-                >
-                  <Ionicons name="repeat" size={16} color={type === 'habit' ? '#000' : theme.colors.textSecondary} />
-                  <Text style={[styles.typeText, type === 'habit' && styles.typeTextActive]}>Habit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.typeOption, type === 'goal' && styles.typeOptionActive]}
-                  onPress={() => setType('goal')}
-                >
-                  <Text style={[styles.typeText, type === 'goal' && styles.typeTextActive]}>Goal</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.cantMissToggle}>
-                <Ionicons name="notifications" size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.cantMissText}>Can't miss?</Text>
-              </View>
-            </View> */}
-
             {/* Detailed Scheduling View (Always Rendered) */}
             <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>when</Text>
-                <View style={styles.frequencySelector}>
+              {type === 'habit' ? (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>when</Text>
+                    <View style={styles.frequencySelector}>
+                      <TouchableOpacity
+                        style={[styles.freqOption, frequency === 'daily' && styles.freqOptionActive]}
+                        onPress={() => setFrequency('daily')}
+                      >
+                        <Text style={[styles.freqText, frequency === 'daily' && styles.freqTextActive]}>Daily</Text>
+                      </TouchableOpacity>
+                      {/* Simplified for demo, can add Weekly here */}
+                    </View>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>at</Text>
+                    <TouchableOpacity
+                      style={styles.timePickerContainer}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setShowTimePicker(true);
+                      }}
+                    >
+                      {/* Selected time text or simple visual, picker is now at bottom */}
+                      <Text style={{ color: 'white', fontSize: 16 }}>{formatTime(reminderTime)}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>until</Text>
+                    <TouchableOpacity style={styles.endDateButton}>
+                      <Text style={styles.endDateText}>End date (optional)</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>deadline</Text>
                   <TouchableOpacity
-                    style={[styles.freqOption, frequency === 'daily' && styles.freqOptionActive]}
-                    onPress={() => setFrequency('daily')}
+                    style={styles.endDateButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setShowDeadlinePicker(true);
+                    }}
                   >
-                    <Text style={[styles.freqText, frequency === 'daily' && styles.freqTextActive]}>Daily</Text>
+                    <Text style={{ color: 'white', fontSize: 16 }}>{formatDate(deadline)}</Text>
                   </TouchableOpacity>
-                  {/* Simplified for demo, can add Weekly here */}
                 </View>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>at</Text>
-                <TouchableOpacity
-                  style={styles.timePickerContainer}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setShowTimePicker(true);
-                  }}
-                >
-                  {/* Selected time text or simple visual, picker is now at bottom */}
-                  <Text style={{ color: 'white', fontSize: 16 }}>{formatTime(reminderTime)}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>until</Text>
-                <TouchableOpacity style={styles.endDateButton}>
-                  <Text style={styles.endDateText}>End date (optional)</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Full width spinner at bottom aligned with request */}
-
+              )}
 
               <TouchableOpacity
                 style={styles.confirmButton}
-                onPress={handleAddHabit}
-                disabled={!name.trim() || isCreatingHabit}
+                onPress={handleAdd}
+                disabled={!name.trim() || isCreatingHabit || isCreatingGoal}
               >
                 <Text style={styles.confirmButtonText}>
-                  {isCreatingHabit ? 'Creating...' : 'Create Habit'}
+                  {isCreatingHabit || isCreatingGoal ? 'Creating...' : `Create ${type === 'habit' ? 'Habit' : 'Goal'}`}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -278,7 +320,29 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
                 onChange={handleTimeChange}
                 textColor="white"
                 themeVariant="dark"
-                style={{ height: 150 }}
+                style={{ height: 180 }}
+              />
+            </View>
+          </>
+        )}
+
+        {showDeadlinePicker && (
+          <>
+            <TouchableOpacity
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 90 }]}
+              activeOpacity={1}
+              onPress={() => setShowDeadlinePicker(false)}
+            />
+            <View style={styles.spinnerContainer}>
+              <DateTimePicker
+                value={deadline}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                textColor="white"
+                themeVariant="dark"
+                minimumDate={new Date()}
+                style={{ height: 180 }}
               />
             </View>
           </>
@@ -301,6 +365,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     gap: 20,
+    minHeight: 500, // Ensure height stays consistent so keyboard doesn't cover input
   },
   header: {
     flexDirection: 'row',
@@ -309,9 +374,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
-    color: '#fff',
+    color: '#c9c9c9ff',
   },
   closeButton: {
     padding: 4,
@@ -323,6 +388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginBottom: 32,
+    marginTop: 12,
   },
   emojiContainer: {
     width: 24,
@@ -396,8 +462,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   detailsContainer: {
-    marginTop: 12,
+    marginTop: 32,
     gap: 24,
+    flex: 1,
   },
   detailRow: {
     flexDirection: 'row',
@@ -490,7 +557,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#5A584E', // brownish from screenshot? Or maybe theme.primary?
     // Checking screenshot 2, button is brownish "Create Habit"
     // Let's use a subtle primary
-    marginTop: 8,
+    marginTop: 'auto',
     padding: 16,
     borderRadius: 16,
     alignItems: 'center',
