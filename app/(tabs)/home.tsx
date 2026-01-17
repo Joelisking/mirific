@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     Alert,
+    KeyboardAvoidingView,
     Modal,
     Platform,
     ScrollView,
@@ -227,12 +228,20 @@ export default function DashboardScreen() {
       </Modal>
 
       {/* Add Habit Modal */}
-      <Modal
+        <Modal
         visible={showAddHabit}
         transparent
         animationType="fade"
         onRequestClose={() => setShowAddHabit(false)}>
-        <View style={styles.habitModalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={styles.habitModalOverlay}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={() => setShowAddHabit(false)}
+            style={StyleSheet.absoluteFill} 
+          />
           <View style={styles.habitModalContent}>
             <View style={styles.habitModalHeader}>
               <Text style={styles.habitModalTitle}>
@@ -243,7 +252,7 @@ export default function DashboardScreen() {
                 <Ionicons
                   name="close"
                   size={24}
-                  color="theme.colors.textSecondary"
+                  color={theme.colors.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -256,7 +265,7 @@ export default function DashboardScreen() {
                   value={newHabitName}
                   onChangeText={setNewHabitName}
                   placeholder="e.g., Morning meditation"
-                  placeholderTextColor="theme.colors.textSecondary"
+                  placeholderTextColor={theme.colors.textSecondary}
                   autoFocus
                 />
               </View>
@@ -283,19 +292,24 @@ export default function DashboardScreen() {
                 <Text style={styles.inputLabel}>Reminder time</Text>
                 <TouchableOpacity
                   style={styles.timePickerButton}
-                  onPress={() => setShowTimePicker(true)}
+                  onPress={() => setShowTimePicker(!showTimePicker)}
                 >
                   <Ionicons name="time-outline" size={20} color={theme.colors.textSecondary} />
                   <Text style={styles.timePickerText}>{formatTime(reminderTime)}</Text>
                 </TouchableOpacity>
                 
                 {showTimePicker && (
+                 <View style={{ alignItems: 'center', marginTop: 8 }}>
                   <DateTimePicker
                     value={reminderTime}
                     mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    display="spinner"
+                    themeVariant="dark"
                     onChange={handleTimeChange}
+                    textColor="white"
+                    style={{ height: 120, width: '100%' }}
                   />
+                 </View>
                 )}
               </View>
             </View>
@@ -312,7 +326,7 @@ export default function DashboardScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -607,6 +621,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    paddingTop: 60, // Add top padding to prevent content from hitting status bar
   },
   habitModalContent: {
     width: '100%',

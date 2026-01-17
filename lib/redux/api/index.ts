@@ -1,9 +1,9 @@
 import {
-  createApi,
-  fetchBaseQuery,
-  BaseQueryFn,
-  FetchArgs,
-  FetchBaseQueryError,
+    BaseQueryFn,
+    createApi,
+    FetchArgs,
+    fetchBaseQuery,
+    FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
 import { Platform } from 'react-native';
 import type { RootState } from '../store';
@@ -13,6 +13,10 @@ import type { RootState } from '../store';
 // Android emulator: needs 10.0.2.2
 // Physical device: needs your computer's IP (update this for your network)
 const getBaseUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  
   if (__DEV__) {
     if (Platform.OS === 'android') {
       return 'http://10.0.2.2:3001';

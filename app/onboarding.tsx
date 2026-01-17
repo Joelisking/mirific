@@ -4,7 +4,6 @@ import NameStep from '@/components/onboarding/NameStep';
 import PreferencesStep from '@/components/onboarding/PreferencesStep';
 import ProgressIndicator from '@/components/onboarding/ProgressIndicator';
 import StrugglesStep from '@/components/onboarding/StrugglesStep';
-import WelcomeStep from '@/components/onboarding/WelcomeStep';
 import { theme } from '@/constants/theme';
 import { useApp } from '@/contexts/AppContext';
 import { usePostApiClerkSyncMutation } from '@/lib/redux';
@@ -13,16 +12,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -47,8 +46,8 @@ export default function OnboardingScreen() {
         setName(fullName);
       }
       // Skip account step if already signed in
-      if (step === 1) {
-        setStep(2);
+      if (step === 0) {
+        setStep(1);
       }
     }
   }, [isSignedIn, user]);
@@ -69,7 +68,7 @@ export default function OnboardingScreen() {
 
   const handleAuthSuccess = () => {
     // User authenticated with Clerk, move to next step
-    setStep(2); // Skip to name step
+    setStep(1); // Skip to name step
   };
 
   const handleComplete = async () => {
@@ -101,11 +100,11 @@ export default function OnboardingScreen() {
   };
 
   const canContinue = () => {
-    if (step === 1) {
+    if (step === 0) {
       // Account step - need to be signed in
       return isSignedIn;
     }
-    if (step === 2) return name.trim().length > 0;
+    if (step === 1) return name.trim().length > 0;
     return true;
   };
 
@@ -120,12 +119,10 @@ export default function OnboardingScreen() {
   const renderStep = () => {
     switch (step) {
       case 0:
-        return <WelcomeStep />;
-      case 1:
         return <ClerkAccountStep onAuthSuccess={handleAuthSuccess} />;
-      case 2:
+      case 1:
         return <NameStep name={name} setName={setName} />;
-      case 3:
+      case 2:
         return (
           <PreferencesStep
             communicationMode={communicationMode}
@@ -134,14 +131,14 @@ export default function OnboardingScreen() {
             setReminderTone={setReminderTone}
           />
         );
-      case 4:
+      case 3:
         return (
           <GoalsStep
             selectedGoals={selectedGoals}
             onToggleGoal={handleGoalToggle}
           />
         );
-      case 5:
+      case 4:
         return (
           <StrugglesStep
             selectedStruggles={selectedStruggles}
@@ -169,26 +166,30 @@ export default function OnboardingScreen() {
           {renderStep()}
         </ScrollView>
 
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            onPress={handleNext}
-            disabled={!canContinue()}
-            style={[
-              styles.button,
-              !canContinue() && styles.buttonDisabled,
-            ]}>
-            <View style={styles.buttonGradient}>
-              <Text style={styles.buttonText}>
-                {step === TOTAL_STEPS - 1
-                  ? isSyncing
-                    ? 'Creating Account...'
-                    : "Let's get started"
-                  : 'Continue'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color="#fff" />
-            </View>
-          </TouchableOpacity>
-        </View>
+        {/* Hide continue button on Auth step (step 0) because Clerk handles it, 
+            UNLESS user is already signed in (which might happen if they go back) */}
+        {step !== 0 && (
+          <View style={styles.bottomContainer}>
+            <TouchableOpacity
+              onPress={handleNext}
+              disabled={!canContinue()}
+              style={[
+                styles.button,
+                !canContinue() && styles.buttonDisabled,
+              ]}>
+              <View style={styles.buttonGradient}>
+                <Text style={styles.buttonText}>
+                  {step === TOTAL_STEPS - 1
+                    ? isSyncing
+                      ? 'Creating Account...'
+                      : "Let's get started"
+                    : 'Continue'}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );

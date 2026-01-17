@@ -10,9 +10,15 @@ WebBrowser.maybeCompleteAuthSession();
 
 interface ClerkAccountStepProps {
   onAuthSuccess: () => void;
+  title?: string;
+  subtitle?: string;
 }
 
-export default function ClerkAccountStep({ onAuthSuccess }: ClerkAccountStepProps) {
+export default function ClerkAccountStep({ 
+  onAuthSuccess, 
+  title = "Create your account", 
+  subtitle = "Choose your preferred sign-in method 🚀" 
+}: ClerkAccountStepProps) {
   useWarmUpBrowser();
 
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -57,8 +63,8 @@ export default function ClerkAccountStep({ onAuthSuccess }: ClerkAccountStepProp
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Create your account</Text>
-      <Text style={styles.stepSubtitle}>Choose your preferred sign-in method 🚀</Text>
+      <Text style={styles.stepTitle}>{title}</Text>
+      <Text style={styles.stepSubtitle}>{subtitle}</Text>
 
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
