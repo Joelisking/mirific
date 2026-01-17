@@ -1,12 +1,13 @@
 import { theme } from '@/constants/theme';
-import { usePostApiGoalsMutation, usePostApiHabitsMutation } from '@/lib/redux';
+import { usePatchApiGoalsByIdMutation, usePostApiGoalsMutation, usePostApiHabitsMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   StyleSheet,
@@ -17,15 +18,30 @@ import {
   View
 } from 'react-native';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 interface AddHabitSheetProps {
   visible: boolean;
   onClose: () => void;
-  onAddSafe?: () => void; // Optional callback if parent needs to know
+  onAddSafe?: () => void;
+  initialType?: 'habit' | 'goal';
+  initialId?: string;
+  initialValues?: {
+    name?: string;
+    emoji?: string;
+    frequency?: 'daily' | 'weekly';
+    reminderTime?: Date;
+    deadline?: Date;
+  };
 }
 
-export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) {
+export default function AddHabitSheet({ visible, onClose, initialType = 'habit', initialId, initialValues }: AddHabitSheetProps) {
   const [createHabit, { isLoading: isCreatingHabit }] = usePostApiHabitsMutation();
   const [createGoal, { isLoading: isCreatingGoal }] = usePostApiGoalsMutation();
+  const [updateGoal, { isLoading: isUpdatingGoal }] = usePatchApiGoalsByIdMutation();
+
+  // Animation State
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   // Form State
   const [name, setName] = useState('');
@@ -37,7 +53,7 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
   const [deadline, setDeadline] = useState(new Date());
 
   const [isCantMiss, setIsCantMiss] = useState(false);
-  const [type, setType] = useState<'habit' | 'goal'>('habit');
+  const [type, setType] = useState<'habit' | 'goal'>(initialType);
 
   // UI State
   const nameInputRef = useRef<TextInput>(null);
@@ -54,23 +70,45 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
     };
   }, []);
 
-  // Reset state when opening
+  // Animation Logic
   useEffect(() => {
     if (visible) {
-      setName('');
-      setEmoji('🛡️');
-      setFrequency('daily');
-      setReminderTime(new Date());
-      setReminderTime(new Date());
-      setReminderTime(new Date());
-      setDeadline(new Date());
+      // Reset state and type
+      setName(initialValues?.name || '');
+      setEmoji(initialValues?.emoji || '🛡️');
+      setFrequency(initialValues?.frequency || 'daily');
+      setReminderTime(initialValues?.reminderTime || new Date());
+      setDeadline(initialValues?.deadline || new Date());
       setShowTimePicker(false);
       setShowDeadlinePicker(false);
-      // Auto-focus logic handled by autoFocus prop or effect? 
-      // Let's rely on autoFocus prop for initial open, or imperative focus
+      setType(initialType);
+
+      // Animate In
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        mass: 1,
+        stiffness: 100,
+      }).start();
+
       setTimeout(() => nameInputRef.current?.focus(), 100);
+    } else {
+      // Reset position when hidden (though Modal unmounts, good practice)
+      slideAnim.setValue(SCREEN_HEIGHT);
     }
-  }, [visible]);
+  }, [visible, initialType, initialValues]);
+
+  const handleClose = () => {
+    Keyboard.dismiss();
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      onClose();
+    });
+  };
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -103,6 +141,7 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
 
     try {
       if (type === 'habit') {
+        // TODO: Add Update Habit logic here if needed later
         await createHabit({
           createHabitRequest: {
             name: name,
@@ -112,20 +151,31 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
           },
         }).unwrap();
       } else {
-        await createGoal({
-          createGoalRequest: {
-            text: name,
-            deadline: deadline.toISOString().split('T')[0], // YYYY-MM-DD
-            status: 'on-track',
-            progress: 0,
-          }
-        }).unwrap();
+        if (initialId) {
+          await updateGoal({
+            id: initialId,
+            updateGoalRequest: {
+              text: name,
+              deadline: deadline.toISOString().split('T')[0],
+            }
+          }).unwrap();
+        } else {
+          await createGoal({
+            createGoalRequest: {
+              text: name,
+              deadline: deadline.toISOString().split('T')[0], // YYYY-MM-DD
+              status: 'on-track',
+              progress: 0,
+              // Assuming default progress 0 and status on-track
+            }
+          }).unwrap();
+        }
       }
 
-      onClose();
+      handleClose(); // Use animated close
     } catch (error) {
-      Alert.alert('Error', `Failed to create ${type}. Please try again.`);
-      console.error(`Failed to create ${type}:`, error);
+      Alert.alert('Error', `Failed to ${initialId ? 'update' : 'create'} ${type}. Please try again.`);
+      console.error(`Failed to ${initialId ? 'update' : 'create'} ${type}:`, error);
     }
   };
 
@@ -158,26 +208,39 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      animationType="fade"
+      onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
+      <View
         style={styles.overlay}
       >
         <TouchableOpacity
           activeOpacity={1}
-          onPress={onClose}
+          onPress={handleClose}
           style={StyleSheet.absoluteFill}
         />
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.sheet}>
+          <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>{type === 'habit' ? 'New Habit' : 'New Goal'}</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              <View style={styles.headerRight}>
+                {type === 'goal' && (
+                  <TouchableOpacity
+                    style={styles.headerCreateButton}
+                    onPress={handleAdd}
+                    disabled={!name.trim() || isCreatingGoal}
+                  >
+                    <Text style={styles.headerCreateButtonText}>
+                      {isCreatingGoal ? 'Creating...' : 'Create'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                  <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Type Toggle */}
@@ -273,36 +336,37 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
                   </View>
                 </>
               ) : (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>deadline</Text>
-                  <TouchableOpacity
-                    style={styles.endDateButton}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setShowDeadlinePicker(true);
-                    }}
-                  >
-                    <Text style={{ color: 'white', fontSize: 16 }}>{formatDate(deadline)}</Text>
-                  </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <DateTimePicker
+                    value={deadline}
+                    mode="date"
+                    display="inline"
+                    onChange={handleDateChange}
+                    textColor="white"
+                    themeVariant="dark"
+                    style={{ height: 320, width: '100%' }}
+                  />
                 </View>
               )}
 
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={handleAdd}
-                disabled={!name.trim() || isCreatingHabit || isCreatingGoal}
-              >
-                <Text style={styles.confirmButtonText}>
-                  {isCreatingHabit || isCreatingGoal ? 'Creating...' : `Create ${type === 'habit' ? 'Habit' : 'Goal'}`}
-                </Text>
-              </TouchableOpacity>
+              {type === 'habit' && (
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={handleAdd}
+                  disabled={!name.trim() || isCreatingHabit}
+                >
+                  <Text style={styles.confirmButtonText}>
+                    {isCreatingHabit ? 'Creating...' : 'Create Habit'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Quick Add Button logic: if keyboard is open (isExpanded false), user hits 'return' or we can add a button toolbar above keyboard if needed. 
                For now, relying on 'return' key or the user manually expanding to click create. 
                Actually, let's allow 'return' on input to submit.
            */}
-          </View>
+          </Animated.View>
         </TouchableWithoutFeedback>
 
         {showTimePicker && (
@@ -326,28 +390,8 @@ export default function AddHabitSheet({ visible, onClose }: AddHabitSheetProps) 
           </>
         )}
 
-        {showDeadlinePicker && (
-          <>
-            <TouchableOpacity
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 90 }]}
-              activeOpacity={1}
-              onPress={() => setShowDeadlinePicker(false)}
-            />
-            <View style={styles.spinnerContainer}>
-              <DateTimePicker
-                value={deadline}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-                textColor="white"
-                themeVariant="dark"
-                minimumDate={new Date()}
-                style={{ height: 180 }}
-              />
-            </View>
-          </>
-        )}
-      </KeyboardAvoidingView>
+
+      </View>
     </Modal>
   );
 }
@@ -365,7 +409,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     gap: 20,
-    minHeight: 500, // Ensure height stays consistent so keyboard doesn't cover input
+    minHeight: 565, // Ensure height stays consistent so keyboard doesn't cover input and fits calendar
   },
   header: {
     flexDirection: 'row',
@@ -378,6 +422,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#c9c9c9ff',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerCreateButton: {
+    backgroundColor: '#5A584E',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+  },
+  headerCreateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   closeButton: {
     padding: 4,
     backgroundColor: '#2C2C2E',
@@ -387,7 +447,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 24,
     marginTop: 12,
   },
   emojiContainer: {
@@ -462,7 +522,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   detailsContainer: {
-    marginTop: 32,
+    marginTop: 8,
     gap: 24,
     flex: 1,
   },

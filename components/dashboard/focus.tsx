@@ -42,10 +42,12 @@ const SkeletonItem = ({ style }: { style: any }) => {
   );
 };
 
-function DashboardDailyFocus() {
+function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
   const router = useRouter();
   const { setCurrentGoal } = useApp();
   const { data: goals, isLoading, error } = useGetApiGoalsQuery();
+
+  // ... (rest of the component logic remains same until return)
 
   const getTodayGoals = () => {
     const today = new Date();
@@ -119,8 +121,8 @@ function DashboardDailyFocus() {
           <View style={styles.emptyState}>
             <Ionicons name="sunny" size={48} color={theme.colors.textSecondary} />
             <Text style={styles.emptyText}>No upcoming deadlines. You're all caught up!</Text>
-            <TouchableOpacity>
-               <Text style={[styles.emptyButton, { color: theme.colors.primary, fontWeight: '600' }]}>Set a new Goal</Text>
+            <TouchableOpacity onPress={onAddGoal}>
+              <Text style={[styles.emptyButton, { color: theme.colors.primary, fontWeight: '600' }]}>Set a new Goal</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -165,13 +167,13 @@ function DashboardDailyFocus() {
                     style={[
                       styles.goalBadge,
                       goal.status === 'at-risk' &&
-                        styles.goalBadgeRisk,
+                      styles.goalBadgeRisk,
                     ]}>
                     <Text
                       style={[
                         styles.goalBadgeText,
                         goal.status === 'at-risk' &&
-                          styles.goalBadgeTextRisk,
+                        styles.goalBadgeTextRisk,
                       ]}>
                       {goal.progress}%
                     </Text>

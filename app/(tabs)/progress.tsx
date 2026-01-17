@@ -1,23 +1,38 @@
+import AddHabitSheet from '@/components/dashboard/AddHabitSheet';
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
-import { useGetApiGoalsQuery } from '@/lib/redux';
+import { useDeleteApiGoalsByIdMutation, useGetApiGoalsQuery, usePatchApiGoalsByIdMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TimelineScreen() {
   const router = useRouter();
-  const { points, setCurrentGoal } = useApp();
+  const { points, setCurrentGoal, setPoints } = useApp();
   const { data: goals, isLoading } = useGetApiGoalsQuery();
+  const [deleteGoal] = useDeleteApiGoalsByIdMutation();
+  const [updateGoal] = usePatchApiGoalsByIdMutation();
 
+  // Edit State
+  const [showEditSheet, setShowEditSheet] = useState(false);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [editInitialValues, setEditInitialValues] = useState<any>(null);
+
+  // ... (previous helper functions: getStatusColor, getStatusLabel, formatDate) ...
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'on-track':
@@ -62,24 +77,122 @@ export default function TimelineScreen() {
     }
   };
 
+  const handleEditGoal = (goal: any) => {
+    setSelectedGoalId(goal.id);
+    setEditInitialValues({
+      name: goal.text,
+      deadline: goal.deadline ? new Date(goal.deadline) : new Date(),
+      emoji: '🎯'
+    });
+    setShowEditSheet(true);
+  };
+
+  const handleDeleteGoal = (goal: any) => {
+    Alert.alert(
+      "Delete Goal",
+      "Are you sure you want to delete this goal?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (goal.id) {
+                await deleteGoal({ id: goal.id }).unwrap();
+              }
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete goal");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleQuickComplete = async (goal: any) => {
+    try {
+      await updateGoal({
+        id: goal.id,
+        updateGoalRequest: {
+          status: 'completed',
+          progress: 100
+        }
+      }).unwrap();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPoints(points + 100);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const showGoalOptions = (goal: any) => {
+    Alert.alert(
+      "Manage Goal",
+      "What would you like to do?",
+      [
+        { text: "Edit", onPress: () => handleEditGoal(goal) },
+        { text: "Delete", style: "destructive", onPress: () => handleDeleteGoal(goal) },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
+  // SWIPE ACTIONS
+  const RightAction = ({ prog, drag, onEdit, onDelete }: any) => {
+    const styleAnimation = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateX: drag.value + 120 }], // 60 width * 2 buttons
+      };
+    });
+
+    return (
+      <Reanimated.View style={styleAnimation}>
+        <View style={styles.rightActions}>
+          <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={onEdit}>
+            <Ionicons name="pencil" size={20} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={onDelete}>
+            <Ionicons name="trash" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Reanimated.View>
+    );
+  };
+
+  const LeftAction = ({ prog, drag, onComplete }: any) => {
+    const styleAnimation = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateX: drag.value - 60 }],
+      };
+    });
+
+    return (
+      <Reanimated.View style={styleAnimation}>
+        <TouchableOpacity style={[styles.actionBtn, styles.completeBtn]} onPress={onComplete}>
+          <Ionicons name="checkmark-done" size={24} color="#fff" />
+        </TouchableOpacity>
+      </Reanimated.View>
+    );
+  };
+
   if (isLoading) {
-      return (
-          <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-          </SafeAreaView>
-      )
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </SafeAreaView>
+    )
   }
 
   const sortedGoals = goals ? [...goals].sort((a, b) => {
-      // Sort: Completed last, then by deadline
-      if (a.status === 'completed' && b.status !== 'completed') return 1;
-      if (a.status !== 'completed' && b.status === 'completed') return -1;
-      return new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime();
+    if (a.status === 'completed' && b.status !== 'completed') return 1;
+    if (a.status !== 'completed' && b.status === 'completed') return -1;
+    return new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime();
   }) : [];
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>My Progress</Text>
       </View>
@@ -87,21 +200,21 @@ export default function TimelineScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Points Banner */}
         <TouchableOpacity
-            style={styles.pointsBanner}
-            onPress={() => router.push('/rewards')}
+          style={styles.pointsBanner}
+          onPress={() => router.push('/rewards')}
         >
-            <View style={styles.pointsContent}>
-                <View style={styles.trophyIcon}>
-                  <Ionicons name="trophy" size={24} color="#FFD700" />
-                </View>
-                <View>
-                    <Text style={styles.pointsLabel}>Total Points</Text>
-                    <Text style={styles.pointsValue}>{points.toLocaleString()}</Text>
-                </View>
+          <View style={styles.pointsContent}>
+            <View style={styles.trophyIcon}>
+              <Ionicons name="trophy" size={24} color="#FFD700" />
             </View>
-            <View style={styles.rankBadge}>
-                <Text style={styles.rankText}>Gold Tier</Text>
+            <View>
+              <Text style={styles.pointsLabel}>Total Points</Text>
+              <Text style={styles.pointsValue}>{points.toLocaleString()}</Text>
             </View>
+          </View>
+          <View style={styles.rankBadge}>
+            <Text style={styles.rankText}>Gold Tier</Text>
+          </View>
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Your Goals</Text>
@@ -120,51 +233,88 @@ export default function TimelineScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-            <View style={styles.goalsList}>
-                {sortedGoals.map((goal) => {
-                    const colors = getStatusColor(goal.status || 'on-track');
-                    const isCompleted = goal.status === 'completed';
-                    
-                    return (
-                    <TouchableOpacity
-                        key={goal.id}
-                        style={[styles.goalCard, isCompleted && styles.goalCardCompleted]}
-                        onPress={() => handleGoalPress(goal)}
-                        disabled={isCompleted}
-                    >
-                        <View style={styles.goalHeader}>
-                            <View style={styles.goalTitleRow}>
-                                <Text style={styles.goalEmoji}>🎯</Text>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={[styles.goalText, isCompleted && styles.goalTextCompleted]} numberOfLines={2}>{goal.text}</Text>
-                                    <Text style={styles.deadline}>{formatDate(goal.deadline)}</Text>
-                                </View>
-                            </View>
-                            
-                            <View style={[styles.statusBadge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                                <Ionicons name={colors.icon as any} size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                <Text style={[styles.statusText, { color: colors.text }]}>
-                                    {getStatusLabel(goal.status || 'on-track')}
-                                </Text>
-                            </View>
+          <View style={styles.goalsList}>
+            {sortedGoals.map((goal) => {
+              const colors = getStatusColor(goal.status || 'on-track');
+              const isCompleted = goal.status === 'completed';
+
+              return (
+                <ReanimatedSwipeable
+                  key={goal.id}
+                  friction={2}
+                  enableTrackpadTwoFingerGesture
+                  rightThreshold={40}
+                  renderRightActions={(prog, drag) => (
+                    <RightAction prog={prog} drag={drag} onEdit={() => handleEditGoal(goal)} onDelete={() => handleDeleteGoal(goal)} />
+                  )}
+                  renderLeftActions={(prog, drag) => !isCompleted ? (
+                    <LeftAction prog={prog} drag={drag} onComplete={() => handleQuickComplete(goal)} />
+                  ) : undefined}
+                >
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.goalCard,
+                      isCompleted && styles.goalCardCompleted,
+                      { transform: [{ scale: pressed ? 0.98 : 1 }] }
+                    ]}
+                    onPress={() => handleGoalPress(goal)}
+                    delayLongPress={200}
+                    onLongPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      showGoalOptions(goal);
+                    }}
+                  >
+                    <View style={styles.goalHeader}>
+                      <View style={[styles.goalTitleRow, { justifyContent: 'space-between', width: '100%' }]}>
+                        <View style={{ flexDirection: 'row', gap: 12, flex: 1 }}>
+                          <Text style={styles.goalEmoji}>🎯</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.goalText, isCompleted && styles.goalTextCompleted]} numberOfLines={2}>{goal.text}</Text>
+                            <Text style={styles.deadline}>{formatDate(goal.deadline)}</Text>
+                          </View>
                         </View>
 
-                        {/* Progress Bar */}
-                        <View style={styles.progressSection}>
-                            <View style={styles.progressLabelRow}>
-                                <Text style={styles.progressLabel}>Progress</Text>
-                                <Text style={styles.progressValue}>{goal.progress || 0}%</Text>
-                            </View>
-                            <View style={styles.progressBar}>
-                                <View style={[styles.progressFill, { width: `${goal.progress || 0}%` as any, backgroundColor: isCompleted ? theme.colors.success : theme.colors.primary }]} />
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                    );
-                })}
-            </View>
+                        <TouchableOpacity
+                          style={{ padding: 4 }}
+                          onPress={() => showGoalOptions(goal)}
+                        >
+                          <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={[styles.statusBadge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                        <Ionicons name={colors.icon as any} size={12} color={colors.text} style={{ marginRight: 4 }} />
+                        <Text style={[styles.statusText, { color: colors.text }]}>
+                          {getStatusLabel(goal.status || 'on-track')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressSection}>
+                      <View style={styles.progressLabelRow}>
+                        <Text style={styles.progressLabel}>Progress</Text>
+                        <Text style={styles.progressValue}>{goal.progress || 0}%</Text>
+                      </View>
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${goal.progress || 0}%` as any, backgroundColor: isCompleted ? theme.colors.success : theme.colors.primary }]} />
+                      </View>
+                    </View>
+                  </Pressable>
+                </ReanimatedSwipeable>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
+
+      <AddHabitSheet
+        visible={showEditSheet}
+        onClose={() => setShowEditSheet(false)}
+        initialType="goal"
+        initialId={selectedGoalId || undefined}
+        initialValues={editInitialValues}
+      />
     </SafeAreaView>
   );
 }
@@ -185,8 +335,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   iconButton: {
-      padding: 8,
-      margin: -8,
+    padding: 8,
+    margin: -8,
   },
   title: {
     fontSize: 18,
@@ -218,12 +368,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   trophyIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: 'rgba(255, 215, 0, 0.1)',
-      alignItems: 'center',
-      justifyContent: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pointsLabel: {
     fontSize: 12,
@@ -238,27 +388,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   rankBadge: {
-      backgroundColor: theme.colors.surfaceElevated,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceElevated,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   rankText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.accent,
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.accent,
   },
 
   sectionTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
 
   goalsList: {
-      gap: 16,
+    gap: 16,
   },
   goalCard: {
     backgroundColor: theme.colors.surface,
@@ -268,27 +418,27 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   goalCardCompleted: {
-      opacity: 0.8,
-      borderColor: 'transparent',
+    opacity: 0.8,
+    borderColor: 'transparent',
   },
   goalHeader: {
-      marginBottom: 16,
-      gap: 12,
+    marginBottom: 16,
+    gap: 12,
   },
   goalTitleRow: {
-      flexDirection: 'row',
-      gap: 12,
+    flexDirection: 'row',
+    gap: 12,
   },
   goalEmoji: {
-      fontSize: 24,
-      backgroundColor: theme.colors.surfaceElevated,
-      width: 40,
-      height: 40,
-      textAlign: 'center',
-      textAlignVertical: 'center',
-      lineHeight: 40,
-      borderRadius: 12,
-      overflow: 'hidden',
+    fontSize: 24,
+    backgroundColor: theme.colors.surfaceElevated,
+    width: 40,
+    height: 40,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: 40,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   goalText: {
     fontSize: 16,
@@ -297,8 +447,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   goalTextCompleted: {
-      textDecorationLine: 'line-through',
-      color: theme.colors.textSecondary,
+    textDecorationLine: 'line-through',
+    color: theme.colors.textSecondary,
   },
   deadline: {
     fontSize: 12,
@@ -317,7 +467,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  
+
   progressSection: {
     gap: 8,
   },
@@ -373,12 +523,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
-  
+
   footer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 24,
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
@@ -402,5 +552,41 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+  },
+
+  // SWIPE ACTIONS STYLES
+  rightActions: {
+    width: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
+    paddingLeft: 12,
+    gap: 8,
+  },
+  actionBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  editBtn: {
+    backgroundColor: '#6b7280', // Gray
+  },
+  deleteBtn: {
+    backgroundColor: '#ef4444', // Red
+  },
+  completeBtn: {
+    backgroundColor: theme.colors.success,
+    marginLeft: 12,
+    height: 50,
+    width: 50,
+    borderRadius: 25,
+    alignSelf: 'center'
   },
 });

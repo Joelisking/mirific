@@ -1,3 +1,4 @@
+import AddHabitSheet from '@/components/dashboard/AddHabitSheet';
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@clerk/clerk-expo';
@@ -5,16 +6,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,11 +42,14 @@ interface Message {
 
 // Helper for API URL
 const getApiBaseUrl = () => {
-    if (__DEV__) {
-      if (Platform.OS === 'android') return 'http://10.0.2.2:3001';
-      return 'http://192.168.86.29:3001';
-    }
-    return 'https://your-production-api.com';
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  if (__DEV__) {
+    if (Platform.OS === 'android') return 'http://10.0.2.2:3001';
+    return 'http://192.168.86.29:3001';
+  }
+  return 'https://your-production-api.com';
 };
 
 export default function ChatScreen() {
@@ -65,6 +69,11 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
 
+  // Sheet State
+  const [showSheet, setShowSheet] = useState(false);
+  const [sheetType, setSheetType] = useState<'habit' | 'goal'>('habit');
+  const [sheetInitialValues, setSheetInitialValues] = useState<any>(undefined);
+
   // Auto-scroll to bottom
   useEffect(() => {
     setTimeout(() => {
@@ -83,7 +92,18 @@ export default function ChatScreen() {
     try {
       setIsTyping(true);
       const token = await getToken();
-      
+
+      const historyContext = currentHistory.map(m => ({
+        role: m.type === 'ai' ? 'assistant' : 'user',
+        content: m.text
+      })).slice(-6);
+
+      // Inject system context with date
+      const systemContext = {
+        role: 'system',
+        content: `Current Date: ${new Date().toISOString().split('T')[0]}. Ensure all date suggestions are in the future relative to this date.`
+      };
+
       const response = await fetch(`${getApiBaseUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: {
@@ -92,10 +112,7 @@ export default function ChatScreen() {
         },
         body: JSON.stringify({
           message: text,
-          context: currentHistory.map(m => ({
-            role: m.type === 'ai' ? 'assistant' : 'user',
-            content: m.text
-          })).slice(-6) // Send last 6 messages for context
+          context: [systemContext, ...historyContext]
         }),
       });
 
@@ -104,7 +121,7 @@ export default function ChatScreen() {
       }
 
       const data = await response.json();
-      
+
       const aiMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
@@ -144,62 +161,52 @@ export default function ChatScreen() {
     sendMessageToBackend(text, newHistory);
   };
 
-  const handleCreateGoal = async (suggestion: GoalSuggestion) => {
+  const formatDate = (dateString: string) => {
     try {
-      const token = await getToken();
-      const response = await fetch(`${getApiBaseUrl()}/api/goals`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          text: suggestion.text,
-          deadline: suggestion.deadline,
-          status: 'on-track',
-          progress: 0,
-        }),
-      });
+      const date = new Date(dateString);
+      const day = date.getDate();
+      const month = date.toLocaleString('default', { month: 'long' });
+      const year = date.getFullYear();
 
-      if (response.ok) {
-        Alert.alert('Goal Created! 🚀', 'Your goal has been added to the dashboard.', [
-            { text: 'Awesome', onPress: () => router.push('/home') }
-        ]);
-      } else {
-        throw new Error('Failed to create goal');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Could not create goal. Please try again.');
+      const suffix = (day: number) => {
+        if (day > 3 && day < 21) return 'th';
+        switch (day % 10) {
+          case 1: return "st";
+          case 2: return "nd";
+          case 3: return "rd";
+          default: return "th";
+        }
+      };
+
+      return `${day}${suffix(day)} ${month}, ${year}`;
+    } catch (e) {
+      return dateString;
     }
   };
 
-  const handleCreateHabit = async (suggestion: HabitSuggestion) => {
-    try {
-      const token = await getToken();
-      const response = await fetch(`${getApiBaseUrl()}/api/habits`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: suggestion.name,
-          emoji: suggestion.emoji,
-          frequency: suggestion.frequency,
-          reminderTime: suggestion.reminderTime,
-        }),
-      });
+  const handleCreateGoal = (suggestion: GoalSuggestion) => {
+    setSheetType('goal');
+    setSheetInitialValues({
+      name: suggestion.text,
+      emoji: suggestion.emoji,
+      deadline: new Date(suggestion.deadline),
+    });
+    setShowSheet(true);
+  };
 
-      if (response.ok) {
-        Alert.alert('Habit Created! ✅', 'Your habit has been added to your daily routine.', [
-            { text: 'Nice!', onPress: () => router.push('/home') }
-        ]);
-      } else {
-        throw new Error('Failed to create habit');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Could not create habit. Please try again.');
-    }
+  const handleCreateHabit = (suggestion: HabitSuggestion) => {
+    setSheetType('habit');
+    // Basic date parsing logic if needed, or default to now
+    let reminderTime = new Date();
+    // In a real app we'd parse "8:00 AM" etc.
+
+    setSheetInitialValues({
+      name: suggestion.name,
+      emoji: suggestion.emoji,
+      frequency: suggestion.frequency.toLowerCase() as 'daily' | 'weekly',
+      reminderTime: reminderTime,
+    });
+    setShowSheet(true);
   };
 
   return (
@@ -231,89 +238,89 @@ export default function ChatScreen() {
         >
           {messages.map((message) => (
             <View key={message.id}>
-                <View
+              <View
                 style={[
-                    styles.messageWrapper,
-                    message.type === 'user'
+                  styles.messageWrapper,
+                  message.type === 'user'
                     ? styles.messageWrapperUser
                     : styles.messageWrapperAI,
                 ]}
-                >
+              >
                 <View
-                    style={[
+                  style={[
                     styles.messageBubble,
                     message.type === 'user'
-                        ? styles.messageBubbleUser
-                        : styles.messageBubbleAI,
-                    ]}
+                      ? styles.messageBubbleUser
+                      : styles.messageBubbleAI,
+                  ]}
                 >
-                    <Text
+                  <Text
                     style={[
-                        styles.messageText,
-                        message.type === 'user' && styles.messageTextUser,
+                      styles.messageText,
+                      message.type === 'user' && styles.messageTextUser,
                     ]}
-                    >
+                  >
                     {message.text}
-                    </Text>
+                  </Text>
                 </View>
+              </View>
+
+              {/* Goal Suggestion Card */}
+              {message.goalSuggestion && (
+                <View style={styles.goalProposalContainer}>
+                  <View style={styles.goalProposalCard}>
+                    <View style={styles.goalProposalHeader}>
+                      <Text style={styles.goalProposalEmoji}>{message.goalSuggestion.emoji}</Text>
+                      <Text style={styles.goalProposalTitle}>Goal Proposal</Text>
+                    </View>
+                    <Text style={styles.goalProposalText}>{message.goalSuggestion.text}</Text>
+                    <View style={styles.goalProposalMeta}>
+                      <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
+                      <Text style={styles.goalProposalDate}>Target: {formatDate(message.goalSuggestion.deadline)}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.lockInButton}
+                      onPress={() => handleCreateGoal(message.goalSuggestion!)}
+                    >
+                      <Text style={styles.lockInButtonText}>Review & Save ⚡️</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              )}
 
-                {/* Goal Suggestion Card */}
-                {message.goalSuggestion && (
-                    <View style={styles.goalProposalContainer}>
-                        <View style={styles.goalProposalCard}>
-                            <View style={styles.goalProposalHeader}>
-                                <Text style={styles.goalProposalEmoji}>{message.goalSuggestion.emoji}</Text>
-                                <Text style={styles.goalProposalTitle}>Goal Proposal</Text>
-                            </View>
-                            <Text style={styles.goalProposalText}>{message.goalSuggestion.text}</Text>
-                            <View style={styles.goalProposalMeta}>
-                                <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
-                                <Text style={styles.goalProposalDate}>Target: {message.goalSuggestion.deadline}</Text>
-                            </View>
-                            <TouchableOpacity 
-                                style={styles.lockInButton}
-                                onPress={() => handleCreateGoal(message.goalSuggestion!)}
-                            >
-                                <Text style={styles.lockInButtonText}>Lock This In 🔒</Text>
-                            </TouchableOpacity>
-                        </View>
+              {/* Habit Suggestion Card */}
+              {message.habitSuggestion && (
+                <View style={styles.habitProposalContainer}>
+                  <View style={styles.habitProposalCard}>
+                    <View style={styles.habitProposalHeader}>
+                      <Text style={styles.habitProposalEmoji}>{message.habitSuggestion.emoji}</Text>
+                      <Text style={styles.habitProposalTitle}>Habit Proposal</Text>
                     </View>
-                )}
-
-                {/* Habit Suggestion Card */}
-                {message.habitSuggestion && (
-                    <View style={styles.habitProposalContainer}>
-                        <View style={styles.habitProposalCard}>
-                            <View style={styles.habitProposalHeader}>
-                                <Text style={styles.habitProposalEmoji}>{message.habitSuggestion.emoji}</Text>
-                                <Text style={styles.habitProposalTitle}>Habit Proposal</Text>
-                            </View>
-                            <Text style={styles.habitProposalText}>{message.habitSuggestion.name}</Text>
-                            <View style={styles.habitProposalMeta}>
-                                <Ionicons name="repeat-outline" size={14} color={theme.colors.textSecondary} />
-                                <Text style={styles.habitProposalFrequency}>{message.habitSuggestion.frequency}</Text>
-                                <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} style={{ marginLeft: 12 }} />
-                                <Text style={styles.habitProposalTime}>{message.habitSuggestion.reminderTime}</Text>
-                            </View>
-                            <TouchableOpacity 
-                                style={styles.lockInHabitButton}
-                                onPress={() => handleCreateHabit(message.habitSuggestion!)}
-                            >
-                                <Text style={styles.lockInHabitButtonText}>Lock This In ✅</Text>
-                            </TouchableOpacity>
-                        </View>
+                    <Text style={styles.habitProposalText}>{message.habitSuggestion.name}</Text>
+                    <View style={styles.habitProposalMeta}>
+                      <Ionicons name="repeat-outline" size={14} color={theme.colors.textSecondary} />
+                      <Text style={styles.habitProposalFrequency}>{message.habitSuggestion.frequency}</Text>
+                      <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} style={{ marginLeft: 12 }} />
+                      <Text style={styles.habitProposalTime}>{message.habitSuggestion.reminderTime}</Text>
                     </View>
-                )}
+                    <TouchableOpacity
+                      style={styles.lockInHabitButton}
+                      onPress={() => handleCreateHabit(message.habitSuggestion!)}
+                    >
+                      <Text style={styles.lockInHabitButtonText}>Review & Save ⚡️</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           ))}
 
           {isTyping && (
-             <View style={[styles.messageWrapper, styles.messageWrapperAI]}>
-                 <View style={[styles.messageBubble, styles.messageBubbleAI, { paddingVertical: 16 }]}>
-                     <ActivityIndicator size="small" color={theme.colors.textSecondary} />
-                 </View>
-             </View>
+            <View style={[styles.messageWrapper, styles.messageWrapperAI]}>
+              <View style={[styles.messageBubble, styles.messageBubbleAI, { paddingVertical: 16 }]}>
+                <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+              </View>
+            </View>
           )}
 
           {/* Suggestions */}
@@ -354,6 +361,13 @@ export default function ChatScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <AddHabitSheet
+        visible={showSheet}
+        onClose={() => setShowSheet(false)}
+        initialType={sheetType}
+        initialValues={sheetInitialValues}
+      />
     </SafeAreaView>
   );
 }
@@ -449,58 +463,58 @@ const styles = StyleSheet.create({
   messageTextUser: {
     color: theme.colors.textPrimary,
   },
-  
+
   // Goal Proposal Styles
   goalProposalContainer: {
-      alignItems: 'flex-start',
-      marginTop: 12,
-      marginBottom: 8,
-      width: '100%',
+    alignItems: 'flex-start',
+    marginTop: 12,
+    marginBottom: 8,
+    width: '100%',
   },
   goalProposalCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 20,
-      borderWidth: 2,
-      borderColor: theme.colors.primary,
-      padding: 20,
-      width: '85%',
-      shadowColor: theme.colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 4,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    padding: 20,
+    width: '85%',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   goalProposalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   goalProposalEmoji: {
-      fontSize: 24,
+    fontSize: 24,
   },
   goalProposalTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   goalProposalText: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 8,
   },
   goalProposalMeta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
   },
   goalProposalDate: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
   lockInButton: {
     backgroundColor: theme.colors.primary,
@@ -517,59 +531,59 @@ const styles = StyleSheet.create({
 
   // Habit Proposal Styles
   habitProposalContainer: {
-      alignItems: 'flex-start',
-      marginTop: 12,
-      marginBottom: 8,
-      width: '100%',
+    alignItems: 'flex-start',
+    marginTop: 12,
+    marginBottom: 8,
+    width: '100%',
   },
   habitProposalCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 20,
-      borderWidth: 2,
-      borderColor: theme.colors.success,
-      padding: 20,
-      width: '85%',
-      shadowColor: theme.colors.success,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 4,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: theme.colors.success,
+    padding: 20,
+    width: '85%',
+    shadowColor: theme.colors.success,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   habitProposalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   habitProposalEmoji: {
-      fontSize: 24,
+    fontSize: 24,
   },
   habitProposalTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.success,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.success,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   habitProposalText: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 8,
   },
   habitProposalMeta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
   },
   habitProposalFrequency: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
   habitProposalTime: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
   lockInHabitButton: {
     backgroundColor: theme.colors.success,

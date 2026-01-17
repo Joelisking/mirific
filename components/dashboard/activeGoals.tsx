@@ -1,33 +1,53 @@
 import { theme } from '@/constants/theme';
-import { useApp } from '@/contexts/AppContext';
+import { useGetApiGoalsQuery } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface ActiveGoalsProps {
   setShowQuickActions: (show: boolean) => void;
+  onAddGoal?: () => void;
 }
 
-const ActiveGoals = ({ setShowQuickActions }: ActiveGoalsProps) => {
+const ActiveGoals = ({ setShowQuickActions, onAddGoal }: ActiveGoalsProps) => {
   const router = useRouter();
-  const { goals, setCurrentGoal } = useApp();
+  const { data: goals, isLoading } = useGetApiGoalsQuery();
+  // const { setCurrentGoal } = useApp(); // Used to set globally but maybe pass via route params instead?
+  // Actually, setCurrentGoal is context state. We can keep useApp for context actions if needed, 
+  // but let's stick to simple routing if possible, or keep context if CheckIn relies on it.
+  // CheckIn likely relies on Context. So we might need to look at CheckIn later.
+  // For now, let's assume valid ID passing or Context setting is needed.
+  // Let's re-import useApp just for setCurrentGoal to maintain compatibility.
+
+  // Re-importing useApp only for actions, not data
+  const { setCurrentGoal } = require('@/contexts/AppContext').useApp();
+
   const handleNavigateToCheckIn = (goalId: string) => {
-    const goal = goals.find((g) => g.id === goalId);
+    const goal = goals?.find((g) => g.id === goalId);
     if (goal) {
       setCurrentGoal(goal);
       router.push('/checkin');
     }
   };
 
-  const activeGoals = goals.filter(
+  const activeGoals = goals?.filter(
     (g) => g.status === 'on-track' || g.status === 'at-risk'
-  );
+  ) || [];
+
+  if (isLoading) {
+    return (
+      <View style={[styles.card, { minHeight: 200, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="small" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
@@ -45,7 +65,13 @@ const ActiveGoals = ({ setShowQuickActions }: ActiveGoalsProps) => {
             color={theme.colors.border}
           />
           <Text style={styles.emptyText}>No active goals yet</Text>
-          <TouchableOpacity onPress={() => setShowQuickActions(true)}>
+          <TouchableOpacity onPress={() => {
+            if (onAddGoal) {
+              onAddGoal();
+            } else {
+              setShowQuickActions(true);
+            }
+          }}>
             <Text style={styles.emptyButton}>
               Set your first goal
             </Text>
@@ -57,20 +83,20 @@ const ActiveGoals = ({ setShowQuickActions }: ActiveGoalsProps) => {
             <TouchableOpacity
               key={goal.id}
               style={styles.activeGoalItem}
-              onPress={() => handleNavigateToCheckIn(goal.id)}>
+              onPress={() => handleNavigateToCheckIn(goal.id!)}>
               <Text style={styles.goalText}>{goal.text}</Text>
               <View style={styles.progressContainer}>
                 <View style={styles.progressLabelRow}>
                   <Text style={styles.progressLabel}>Progress</Text>
                   <Text style={styles.progressValue}>
-                    {goal.progress}%
+                    {goal.progress || 0}%
                   </Text>
                 </View>
                 <View style={styles.progressBar}>
                   <View
                     style={[
                       styles.progressFill,
-                      { width: `${goal.progress}%` },
+                      { width: `${goal.progress || 0}%` },
                     ]}
                   />
                 </View>

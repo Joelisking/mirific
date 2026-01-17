@@ -23,6 +23,12 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showAddHabit, setShowAddHabit] = useState(false);
+  const [sheetInitialType, setSheetInitialType] = useState<'habit' | 'goal'>('habit');
+
+  const openAddSheet = (type: 'habit' | 'goal') => {
+    setSheetInitialType(type);
+    setShowAddHabit(true);
+  };
 
   const quickActions = [
     {
@@ -40,7 +46,7 @@ export default function DashboardScreen() {
       emoji: '🎯',
       action: () => {
         setShowQuickActions(false);
-        router.push('/create-goal');
+        openAddSheet('goal');
       },
     },
     {
@@ -49,7 +55,7 @@ export default function DashboardScreen() {
       emoji: '✅',
       action: () => {
         setShowQuickActions(false);
-        setShowAddHabit(true);
+        openAddSheet('habit');
       },
     },
     {
@@ -89,13 +95,16 @@ export default function DashboardScreen() {
         <DashboardWeeklyCalendar />
 
         {/* Today's Focus */}
-        <DashboardDailyFocus />
+        <DashboardDailyFocus onAddGoal={() => openAddSheet('goal')} />
 
         {/* Daily Habits */}
-        <DailyHabits setShowAddHabit={setShowAddHabit} />
+        <DailyHabits setShowAddHabit={(show) => show ? openAddSheet('habit') : setShowAddHabit(false)} />
 
         {/* Active Goals */}
-        <ActiveGoals setShowQuickActions={setShowQuickActions} />
+        <ActiveGoals
+          setShowQuickActions={setShowQuickActions}
+          onAddGoal={() => openAddSheet('goal')}
+        />
       </ScrollView>
 
       {/* Floating Action Button */}
@@ -169,9 +178,10 @@ export default function DashboardScreen() {
       </Modal>
 
       {/* Add Habit Sheet */}
-      <AddHabitSheet 
-        visible={showAddHabit} 
-        onClose={() => setShowAddHabit(false)} 
+      <AddHabitSheet
+        visible={showAddHabit}
+        onClose={() => setShowAddHabit(false)}
+        initialType={sheetInitialType}
       />
     </SafeAreaView>
   );
