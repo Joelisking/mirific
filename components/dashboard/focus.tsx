@@ -52,17 +52,28 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
   const getTodayGoals = () => {
     const today = new Date();
     return goals?.filter((goal) => {
+      if (goal.status === 'completed') return false;
       if (!goal.deadline) return false;
+
       const deadline = new Date(goal.deadline);
-      const diffDays = Math.ceil(
-        (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays <= 3 && goal.status !== 'completed';
+      const diffTime = deadline.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Criteria 1: Due Soon (<= 3 days)
+      // Note: We check diffDays > -100 (or similar) to include overdue, 
+      // but usually 'completed' check handles old stuff. 
+      // Let's assume we want to see overdue items too until completed.
+      const isDueSoon = diffDays <= 3;
+
+      // Criteria 2: At Risk (< 7 days AND < 50% progress)
+      // This matches the logic discussed for "At Risk"
+      const isAtRisk = diffDays < 7 && (goal.progress || 0) < 50;
+
+      return isDueSoon || isAtRisk;
     });
   };
 
   const todayFocus = getTodayGoals();
-
   const hasGoals = todayFocus && todayFocus.length > 0;
 
   if (isLoading) {
@@ -89,6 +100,12 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
     console.error('Failed to load goals:', error);
     return null;
   }
+
+  // If no goals meet the criteria, hide the component entirely
+  if (!hasGoals) {
+    return null;
+  }
+
   const handleNavigateToCheckIn = (goalId: string) => {
     const goal = goals?.find((g) => g.id === goalId);
     if (goal) {
@@ -96,6 +113,7 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
       router.push('/checkin');
     }
   };
+
   return (
     <>
       <View style={styles.focusCard}>
@@ -109,40 +127,44 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
               />
             </View>
             <View>
-              <Text style={styles.cardTitle}>Upcoming Deadlines</Text>
+              <Text style={styles.cardTitle}>Daily Focus</Text>
               <Text style={styles.cardSubtitle}>
-                {hasGoals ? `${todayFocus?.length} ${todayFocus?.length === 1 ? 'goal' : 'goals'} need attention` : 'Stay focused'}
+                {`${todayFocus?.length} ${todayFocus?.length === 1 ? 'goal needs' : 'goals need'} attention`}
               </Text>
             </View>
           </View>
         </View>
 
-        {!hasGoals ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="sunny" size={48} color={theme.colors.textSecondary} />
-            <Text style={styles.emptyText}>No upcoming deadlines. You're all caught up!</Text>
-            <TouchableOpacity onPress={onAddGoal}>
-              <Text style={[styles.emptyButton, { color: theme.colors.primary, fontWeight: '600' }]}>Set a new Goal</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.goalsList}>
-            {todayFocus?.map((goal) => (
+        <View style={styles.goalsList}>
+          {todayFocus?.map((goal) => {
+            const deadline = new Date(goal.deadline!);
+            const today = new Date();
+            const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            const isAtRisk = diffDays < 7 && (goal.progress || 0) < 50;
+            const isOverdue = diffDays < 0;
+
+            return (
               <TouchableOpacity
                 key={goal.id}
                 style={[
                   styles.goalItem,
-                  goal.status === 'at-risk' && styles.goalItemAtRisk,
+                  isAtRisk && styles.goalItemAtRisk,
                 ]}
                 onPress={() => handleNavigateToCheckIn(goal.id as string)}>
                 <View style={styles.goalHeader}>
                   <Text style={styles.goalText} numberOfLines={2}>
                     {goal.text}
                   </Text>
-                  {goal.status === 'at-risk' && (
+                  {isAtRisk && (
                     <View style={styles.urgentBadge}>
                       <Ionicons name="alert-circle" size={14} color={theme.colors.error} />
-                      <Text style={styles.urgentText}>Urgent</Text>
+                      <Text style={styles.urgentText}>At Risk</Text>
+                    </View>
+                  )}
+                  {!isAtRisk && isOverdue && (
+                    <View style={[styles.urgentBadge, { marginBottom: 0 }]}>
+                      <Ionicons name="time" size={14} color={theme.colors.error} />
+                      <Text style={styles.urgentText}>Overdue</Text>
                     </View>
                   )}
                 </View>
@@ -153,7 +175,7 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
                       size={14}
                       color={theme.colors.textSecondary}
                     />
-                    <Text style={styles.goalDeadline}>
+                    <Text style={[styles.goalDeadline, isOverdue && { color: theme.colors.error }]}>
                       {goal.deadline ? new Date(goal.deadline).toLocaleDateString(
                         'en-US',
                         {
@@ -166,23 +188,21 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
                   <View
                     style={[
                       styles.goalBadge,
-                      goal.status === 'at-risk' &&
-                      styles.goalBadgeRisk,
+                      isAtRisk && styles.goalBadgeRisk,
                     ]}>
                     <Text
                       style={[
                         styles.goalBadgeText,
-                        goal.status === 'at-risk' &&
-                        styles.goalBadgeTextRisk,
+                        isAtRisk && styles.goalBadgeTextRisk,
                       ]}>
                       {goal.progress}%
                     </Text>
                   </View>
                 </View>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
+            );
+          })}
+        </View>
       </View>
     </>
   );

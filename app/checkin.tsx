@@ -1,5 +1,6 @@
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
+import { analyzeGoalRisk } from '@/lib/ai';
 import { usePatchApiGoalsByIdMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -42,13 +43,40 @@ export default function CheckInScreen() {
   const daysLeft = getDaysUntilDeadline();
 
   // ----- Actions -----
+  // ----- Actions -----
   const handleSave = async (newStatus?: 'on-track' | 'at-risk' | 'completed') => {
     try {
       let status = newStatus;
+
+      // If manual status not provided, calculate it
       if (!status) {
-        if (progress >= 100) status = 'completed';
-        else if (daysLeft !== null && daysLeft < 7 && progress < 50) status = 'at-risk';
-        else status = 'on-track';
+        if (progress >= 100) {
+          status = 'completed';
+        } else {
+          // AI Analysis
+          try {
+            // Basic Math Fallback first
+            let derivedStatus: 'on-track' | 'at-risk' = 'on-track';
+            if (daysLeft !== null && daysLeft < 7 && progress < 50) derivedStatus = 'at-risk';
+
+            // AI Enhancement
+            // We only run AI if it's not obviously completed or obviously just started? 
+            // Actually, let's run it for key moments or just always (it's cheap).
+            const aiResult = await analyzeGoalRisk({
+              text: currentGoal.text || '',
+              deadline: currentGoal.deadline,
+              progress: progress,
+              status: derivedStatus
+            });
+
+            status = aiResult;
+          } catch (e) {
+            console.warn('AI analysis failed, using fallback');
+            // Fallback to simple math
+            if (daysLeft !== null && daysLeft < 7 && progress < 50) status = 'at-risk';
+            else status = 'on-track';
+          }
+        }
       }
 
       // Force completion if 100%
@@ -231,59 +259,101 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
+  checkInButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 16, // Squared
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  checkInButtonActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    transform: [{ scale: 1.05 }],
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
   },
+  backButton: {
+    width: 44,
+    height: 44, // Larger touch target
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.small,
+  },
+  headerTitle: {
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  // content: {
+  //   flex: 1,
+  //   paddingHorizontal: 24,
+  // },
   heroSection: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 32,
     marginBottom: 48,
   },
   emojiContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    ...theme.shadows.medium,
+    borderWidth: 0,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 16, // Squared
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    fontFamily: theme.typography.h3.fontFamily,
   },
   heroEmoji: {
-    fontSize: 40,
+    fontSize: 44,
   },
-  goalTitle: {
-    fontSize: 28,
+  questionText: {
+    fontSize: 24,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     textAlign: 'center',
+    marginBottom: 32,
+    fontFamily: theme.typography.h1.fontFamily,
+    letterSpacing: -0.5,
+  },
+  goalTitle: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 34,
+    lineHeight: 40,
+    fontFamily: theme.typography.h1.fontFamily,
+    letterSpacing: -0.5,
   },
   deadlineBadge: {
     flexDirection: 'row',
@@ -292,13 +362,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 8, // Squared minimalist
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   deadlineBadgeRisk: {
-    borderColor: theme.colors.primary,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.error,
   },
   deadlineText: {
     fontSize: 14,
@@ -306,158 +376,180 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   deadlineTextRisk: {
-    color: theme.colors.primary,
+    color: theme.colors.error,
+  },
+  riskBadge: {
+    // Kept if needed elsewhere, or remove if not used. 
+    // Based on previous edits, I might have intended to replace deadlineBadge BUT the code uses deadlineBadge.
+    // So I will keep deadlineBadge as the primary style for that element.
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 16,
+    alignSelf: 'center',
+    backgroundColor: theme.colors.surfaceHighlight,
   },
 
   // Progress
   progressSection: {
-    marginBottom: 40,
+    marginBottom: 48,
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   percentageText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
+    fontSize: 40,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    fontFamily: theme.typography.h1.fontFamily,
   },
   sliderContainer: {
-    height: 40, // Taller touch area
+    height: 48, // Taller touch area
     justifyContent: 'center',
   },
   track: {
-    height: 8,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: 4,
+    height: 12,
+    backgroundColor: theme.colors.surface, // Lighter background
+    borderRadius: 6,
     width: '100%',
     position: 'absolute',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   fill: {
-    height: 8,
+    height: 12,
     backgroundColor: theme.colors.primary,
-    borderRadius: 4,
+    borderRadius: 6,
     position: 'absolute',
   },
   knob: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#fff',
     position: 'absolute',
-    top: 8, // (40 - 24) / 2 = 8
-    marginLeft: -12, // center on end of fill
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    top: 8, // (48 - 32) / 2 = 8
+    marginLeft: -16,
+    ...theme.shadows.medium,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   sliderHint: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 8,
-    opacity: 0.6,
+    fontSize: 14,
+    marginTop: 12,
+    fontStyle: 'italic',
+    opacity: 0.8,
   },
 
   // Coach
   coachCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.xl,
+    padding: 24,
+    marginTop: 16,
+    ...theme.shadows.small,
+    borderWidth: 0,
   },
   coachHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     marginBottom: 12,
   },
   coachAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   coachName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   coachMessage: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    lineHeight: 22,
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    lineHeight: 24,
+    fontFamily: theme.typography.h3.fontFamily, // Serif for coach voice
+    fontStyle: 'italic',
   },
 
   // Footer
   footer: {
     padding: 24,
-    gap: 12,
+    gap: 16,
+    paddingBottom: 40,
   },
   btnPrimary: {
-    backgroundColor: theme.colors.success,
-    paddingVertical: 18,
-    borderRadius: 20,
+    backgroundColor: theme.colors.primary, // Clean primary
+    paddingVertical: 20,
+    borderRadius: 24,
     alignItems: 'center',
-    shadowColor: theme.colors.success,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    ...theme.shadows.medium,
   },
   btnPrimaryText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   btnSecondary: {
-    backgroundColor: theme.colors.surfaceElevated,
-    paddingVertical: 18,
-    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 20,
+    borderRadius: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   btnSecondaryText: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
   statusCard: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 16,
+    gap: 16,
+    padding: 20,
     marginBottom: 24,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadows.small,
   },
   statusCardRisk: {
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.error,
   },
   statusCardTrack: {
-    backgroundColor: 'rgba(34, 197, 94, 0.05)',
-    borderColor: 'rgba(34, 197, 94, 0.2)',
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.success,
   },
   statusTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   statusExplainer: {
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });

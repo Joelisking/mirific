@@ -214,22 +214,21 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    gap: 4,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    paddingHorizontal: 0,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h2.fontFamily,
+    letterSpacing: -0.5,
   },
   addButton: {
     fontSize: 14,
@@ -304,29 +303,30 @@ const styles = StyleSheet.create({
   goalBadgeRisk: {
     backgroundColor: theme.colors.background,
   },
-  goalBadgeText: {
-    fontSize: 12,
-    color: theme.colors.success,
-  },
-  goalBadgeTextRisk: {
-    color: theme.colors.primary,
-  },
   habitsList: {
-    gap: 12,
+    gap: 0, // No gap, using dividers
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   habitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 16,
+    gap: 16,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divider,
+    borderRadius: 0, // Flat list
   },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderRadius: 6, // Squircle
+    borderWidth: 1.5,
+    borderColor: theme.colors.textSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },

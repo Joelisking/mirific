@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    // borderBottomWidth: 1, // Removed for seamless feel
+    // borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
   },
   iconButton: {
@@ -339,9 +339,11 @@ const styles = StyleSheet.create({
     margin: -8,
   },
   title: {
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h1.fontFamily,
+    letterSpacing: -0.5,
   },
   scrollView: {
     flex: 1,
@@ -412,14 +414,16 @@ const styles = StyleSheet.create({
   },
   goalCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 24,
+    borderRadius: 16, // Sharper
     padding: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    // No shadow
   },
   goalCardCompleted: {
-    opacity: 0.8,
-    borderColor: 'transparent',
+    opacity: 0.6,
+    backgroundColor: theme.colors.background, // Fade into background
+    ...theme.shadows.small,
   },
   goalHeader: {
     marginBottom: 16,

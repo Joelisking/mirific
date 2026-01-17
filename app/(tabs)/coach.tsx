@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,7 +19,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -78,6 +79,15 @@ export default function ChatScreen() {
   }, [activeSessionId]);
 
   // Auto-scroll to bottom
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => {
+      showSubscription.remove();
+    };
+  }, []);
+
   useEffect(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -239,7 +249,7 @@ export default function ChatScreen() {
           <View style={styles.headerContent}>
             <View style={styles.logoContainer}>
               <View style={styles.logoGradient}>
-                <Ionicons name="sparkles" size={20} color="#fff" />
+                <Ionicons name="sparkles" size={20} color="#000" />
               </View>
             </View>
             <View style={{ flex: 1 }}>
@@ -448,16 +458,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    marginBottom: 55,
   },
   keyboardView: {
     flex: 1,
   },
   header: {
     paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    paddingVertical: 16,
+    backgroundColor: theme.colors.background, // Seamless header
+    borderBottomWidth: 0,
   },
   headerContent: {
     flexDirection: 'row',
@@ -468,37 +478,42 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    overflow: 'hidden',
+    ...theme.shadows.small,
   },
   logoGradient: {
     width: '100%',
     height: '100%',
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 24,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h1.fontFamily,
+    letterSpacing: -1,
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.textSecondary,
+    fontStyle: 'italic',
     marginTop: 2,
   },
   historyButton: {
-    padding: 8,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: 12,
+    padding: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    ...theme.shadows.small,
   },
   messagesContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
   messagesContent: {
-    padding: 20,
-    gap: 16,
+    padding: 24,
+    gap: 24, // Wider gap between messages
     paddingBottom: 100,
   },
   messageWrapper: {
@@ -512,222 +527,228 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageBubble: {
-    maxWidth: '80%',
+    maxWidth: '85%',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    borderRadius: 16, // Sharper
+    // No shadow
   },
   messageBubbleUser: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary, // Indigo
     borderBottomRightRadius: 4,
   },
   messageBubbleAI: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: theme.colors.surfaceHighlight, // Light Gray
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   messageText: {
-    fontSize: 15,
+    fontSize: 16,
     color: theme.colors.textPrimary,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   messageTextUser: {
-    color: theme.colors.textPrimary,
+    color: '#fff',
   },
 
   // Goal Proposal Styles
   goalProposalContainer: {
     alignItems: 'flex-start',
-    marginTop: 12,
+    marginTop: 16,
     marginBottom: 8,
     width: '100%',
   },
   goalProposalCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    padding: 20,
-    width: '85%',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: 24,
+    padding: 24,
+    width: '90%',
+    ...theme.shadows.medium,
   },
   goalProposalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: 12,
   },
   goalProposalEmoji: {
-    fontSize: 24,
+    fontSize: 28,
   },
   goalProposalTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.primary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   goalProposalText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 12,
+    fontFamily: theme.typography.h2.fontFamily,
   },
   goalProposalMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 20,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   goalProposalDate: {
     fontSize: 14,
     color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   lockInButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: 'center',
+    alignSelf: 'stretch',
+    ...theme.shadows.small,
   },
   lockInButtonText: {
-    color: theme.colors.textPrimary,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
 
   // Habit Proposal Styles
   habitProposalContainer: {
     alignItems: 'flex-start',
-    marginTop: 12,
+    marginTop: 16,
     marginBottom: 8,
     width: '100%',
   },
   habitProposalCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: theme.colors.success,
-    padding: 20,
-    width: '85%',
-    shadowColor: theme.colors.success,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: 24,
+    padding: 24,
+    width: '90%',
+    ...theme.shadows.medium,
   },
   habitProposalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: 12,
   },
   habitProposalEmoji: {
-    fontSize: 24,
+    fontSize: 28,
   },
   habitProposalTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.success,
+    color: theme.colors.success, // Keep green for habits? Or use secondary accent? Let's use accent (Green)
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   habitProposalText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 12,
+    fontFamily: theme.typography.h2.fontFamily,
   },
   habitProposalMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 20,
+    flexWrap: 'wrap',
   },
   habitProposalFrequency: {
     fontSize: 14,
     color: theme.colors.textSecondary,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   habitProposalTime: {
     fontSize: 14,
     color: theme.colors.textSecondary,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   lockInHabitButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.accent, // Green accent
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: 'center',
+    alignSelf: 'stretch',
+    ...theme.shadows.small,
   },
   lockInHabitButtonText: {
-    color: theme.colors.textPrimary,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
 
   suggestionsContainer: {
-    gap: 8,
-    paddingTop: 8,
+    gap: 12,
+    paddingTop: 16,
+    alignItems: 'center',
   },
   suggestionsTitle: {
-    fontSize: 12,
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    paddingHorizontal: 8,
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
   suggestionButton: {
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    ...theme.shadows.small,
   },
   suggestionText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    paddingBottom: 90,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    paddingVertical: 12,
+    // marginBottom: 65, // Clear the tab bar
+    backgroundColor: theme.colors.background, // Transparent-ish
   },
   inputWrapper: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'row', // Changed from default
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 24,
-    paddingRight: 8,
+    borderRadius: 32, // Pill shape
+    padding: 6,
+    paddingLeft: 20,
+    ...theme.shadows.medium,
+    borderWidth: 0,
   },
   input: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    fontSize: 15,
+    fontSize: 16,
     color: theme.colors.textPrimary,
+    paddingVertical: 12,
+    maxHeight: 100,
   },
   sendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -737,19 +758,20 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    padding: 20,
+    padding: 24,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 10,
+    marginBottom: 24,
+    marginTop: 24,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h1.fontFamily,
   },
   modalClose: {
     fontSize: 16,
@@ -757,16 +779,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   newChatContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   newChatButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 16,
+    padding: 18,
+    borderRadius: 20,
     gap: 8,
+    ...theme.shadows.small,
   },
   newChatText: {
     color: '#fff',
@@ -780,26 +803,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 20,
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderRadius: 20,
+    marginBottom: 12,
+    ...theme.shadows.small,
+    borderWidth: 0,
   },
   historyItemActive: {
-    borderColor: theme.colors.primary,
     backgroundColor: theme.colors.surfaceElevated,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.primary,
   },
   historyTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   historyDate: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
-  }
+  },
 });
 

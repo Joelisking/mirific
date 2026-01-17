@@ -5,56 +5,56 @@
 
 import { Platform } from 'react-native';
 
-// Mirific Brand Colors (Dark Theme with Warm Accents)
+// Mirific Brand Colors (Minimalist Indigo)
 export const theme = {
   colors: {
-    // Primary dark theme
-    background: '#0F0F0F',
-    surface: '#1A1A1A',
-    surfaceElevated: '#242424',
-    surfaceHighlight: '#2A2A2A',
+    // Primary theme (Crisp White & Electric Indigo)
+    background: '#FFFFFF', // Pure White
+    surface: '#F9FAFB', // Cool Gray 50 (Very subtle contrast)
+    surfaceElevated: '#FFFFFF',
+    surfaceHighlight: '#F3F4F6', // Cool Gray 100
 
-    // Warm accent colors
-    primary: '#D4B896',
-    primaryDark: '#B89968',
-    primaryLight: '#E8D4B8',
-    accent: '#FFD700',
+    // Accents
+    primary: '#4F46E5', // Electric Indigo
+    primaryDark: '#3730A3', // Deep Indigo
+    primaryLight: '#C7D2FE', // Soft Indigo
+    accent: '#10B981', // Emerald Green (Digital success color)
 
     // Text colors
-    textPrimary: '#FFFFFF',
-    textSecondary: '#A0A0A0',
-    textTertiary: '#666666',
-    textInverse: '#0F0F0F',
+    textPrimary: '#111827', // Gray 900 (Almost Black)
+    textSecondary: '#6B7280', // Gray 500
+    textTertiary: '#9CA3AF', // Gray 400
+    textInverse: '#FFFFFF',
 
     // Status colors
-    success: '#4CAF50',
-    warning: '#FFA726',
-    error: '#EF5350',
-    info: '#42A5F5',
-    onTrack: '#4CAF50',
-    atRisk: '#FFA726',
+    success: '#10B981', // Emerald
+    warning: '#F59E0B', // Amber
+    error: '#EF4444', // Red 500
+    info: '#4F46E5', // Indigo
+    onTrack: '#10B981',
+    atRisk: '#EF4444',
 
     // UI elements
-    border: '#2A2A2A',
-    divider: '#1F1F1F',
-    overlay: 'rgba(0, 0, 0, 0.7)',
+    border: '#E5E7EB', // Gray 200
+    divider: '#F3F4F6',
+    overlay: 'rgba(17, 24, 39, 0.4)', // Darker overlay
 
     // Legacy support
     light: {
-      text: '#11181C',
-      background: '#fff',
-      tint: '#D4B896',
-      icon: '#687076',
-      tabIconDefault: '#687076',
-      tabIconSelected: '#D4B896',
+      text: '#111827',
+      background: '#FFFFFF',
+      tint: '#4F46E5',
+      icon: '#6B7280',
+      tabIconDefault: '#9CA3AF',
+      tabIconSelected: '#4F46E5',
     },
     dark: {
-      text: '#FFFFFF',
-      background: '#0F0F0F',
-      tint: '#D4B896',
-      icon: '#A0A0A0',
-      tabIconDefault: '#666666',
-      tabIconSelected: '#D4B896',
+      text: '#111827',
+      background: '#FFFFFF',
+      tint: '#4F46E5',
+      icon: '#6B7280',
+      tabIconDefault: '#9CA3AF',
+      tabIconSelected: '#4F46E5',
     },
   },
 
@@ -68,68 +68,77 @@ export const theme = {
   },
 
   borderRadius: {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
-    xxl: 32,
+    sm: 6,
+    md: 8,
+    lg: 12,
+    xl: 16, // Sharper corners for modern feel
+    xxl: 24,
     full: 9999,
   },
 
   typography: {
     h1: {
-      fontSize: 32,
+      fontSize: 34, // iOS Title 1 size
       fontWeight: '700' as const,
       lineHeight: 40,
+      fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
+      letterSpacing: -0.5,
     },
     h2: {
-      fontSize: 24,
-      fontWeight: '600' as const,
-      lineHeight: 32,
-    },
-    h3: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '600' as const,
       lineHeight: 28,
+      fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
+      letterSpacing: -0.4,
+    },
+    h3: {
+      fontSize: 18,
+      fontWeight: '600' as const,
+      lineHeight: 24,
+       fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
     },
     body: {
       fontSize: 16,
       fontWeight: '400' as const,
       lineHeight: 24,
+      fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
     },
     bodySmall: {
       fontSize: 14,
       fontWeight: '400' as const,
       lineHeight: 20,
+      fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
     },
     caption: {
       fontSize: 12,
-      fontWeight: '400' as const,
+      fontWeight: '500' as const,
       lineHeight: 16,
+      letterSpacing: 0.2,
+      fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
     },
   },
 
   shadows: {
     small: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
     },
     medium: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
+      shadowOpacity: 0.08,
       shadowRadius: 8,
-      elevation: 4,
+      elevation: 3,
     },
     large: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.35,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.1,
       shadowRadius: 16,
-      elevation: 8,
+      elevation: 6,
     },
   },
 };
@@ -139,22 +148,21 @@ export const Colors = theme.colors;
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
+    sans: 'System',
+    serif: 'System',
+    rounded: 'System',
+    mono: 'Courier New',
   },
   default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
+    sans: 'sans-serif',
+    serif: 'sans-serif',
+    rounded: 'sans-serif',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded:
-      "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: 'system-ui, -apple-system, sans-serif',
+    serif: 'system-ui, -apple-system, sans-serif',
+    rounded: 'system-ui, -apple-system, sans-serif',
+    mono: 'monospace',
   },
 });

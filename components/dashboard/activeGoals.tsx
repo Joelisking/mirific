@@ -125,22 +125,22 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    gap: 4,
+    paddingBottom: 24,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    paddingHorizontal: 0,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h2.fontFamily,
+    letterSpacing: -0.5,
   },
   addButton: {
     fontSize: 14,
@@ -274,10 +274,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   activeGoalItem: {
-    borderWidth: 2,
-    borderColor: theme.colors.surfaceHighlight,
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    ...theme.shadows.medium, // Slightly more lift than habits
+    borderWidth: 0,
+    marginBottom: 8,
   },
   progressContainer: {
     marginTop: 12,
