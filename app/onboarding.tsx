@@ -9,15 +9,16 @@ import { useApp } from '@/contexts/AppContext';
 import { usePostApiClerkSyncMutation } from '@/lib/redux';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -151,8 +152,11 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradient}>
+    <LinearGradient
+      colors={theme.gradients.warmBeige as [string, string]}
+      style={styles.gradientContainer}
+    >
+      <SafeAreaView style={styles.container}>
         <ProgressIndicator
           currentStep={step}
           totalSteps={TOTAL_STEPS}
@@ -166,43 +170,45 @@ export default function OnboardingScreen() {
           {renderStep()}
         </ScrollView>
 
-        {/* Hide continue button on Auth step (step 0) because Clerk handles it, 
-            UNLESS user is already signed in (which might happen if they go back) */}
+        {/* Hide continue button on Auth step (step 0) because Clerk handles it */}
         {step !== 0 && (
           <View style={styles.bottomContainer}>
             <TouchableOpacity
               onPress={handleNext}
-              disabled={!canContinue()}
+              disabled={!canContinue() || isSyncing}
               style={[
-                styles.button,
+                styles.buttonContainer,
                 !canContinue() && styles.buttonDisabled,
-              ]}>
-              <View style={styles.buttonGradient}>
-                <Text style={styles.buttonText}>
+              ]}
+              activeOpacity={0.9}
+            >
+              <LinearGradient
+                colors={canContinue() ? theme.gradients.sage as [string, string] : [theme.colors.border, theme.colors.border]}
+                style={styles.button}
+              >
+                <Text style={[styles.buttonText, !canContinue() && styles.buttonTextDisabled]}>
                   {step === TOTAL_STEPS - 1
                     ? isSyncing
                       ? 'Creating Account...'
                       : "Let's get started"
                     : 'Continue'}
                 </Text>
-                <Ionicons name="chevron-forward" size={18} color="#fff" />
-              </View>
+                <Ionicons name="chevron-forward" size={18} color={canContinue() ? '#fff' : theme.colors.textTertiary} />
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  gradient: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -212,24 +218,27 @@ const styles = StyleSheet.create({
   bottomContainer: {
     padding: theme.spacing.lg,
   },
-  button: {
-    borderRadius: theme.borderRadius.lg,
+  buttonContainer: {
+    borderRadius: theme.borderRadius.xl,
     overflow: 'hidden',
-    backgroundColor: theme.colors.primary,
+    ...theme.shadows.medium,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
-  buttonGradient: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 18,
     gap: 8,
   },
   buttonText: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 17,
     fontWeight: '600',
+  },
+  buttonTextDisabled: {
+    color: theme.colors.textTertiary,
   },
 });

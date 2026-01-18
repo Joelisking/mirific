@@ -2,6 +2,7 @@ import { theme } from '@/constants/theme';
 import { useWarmUpBrowser } from '@/hooks/use-warm-up-browser';
 import { useOAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -14,10 +15,10 @@ interface ClerkAccountStepProps {
   subtitle?: string;
 }
 
-export default function ClerkAccountStep({ 
-  onAuthSuccess, 
-  title = "Create your account", 
-  subtitle = "Choose your preferred sign-in method 🚀" 
+export default function ClerkAccountStep({
+  onAuthSuccess,
+  title = "Create your account",
+  subtitle = "Choose your preferred sign-in method"
 }: ClerkAccountStepProps) {
   useWarmUpBrowser();
 
@@ -63,6 +64,17 @@ export default function ClerkAccountStep({
 
   return (
     <View style={styles.stepContainer}>
+      {/* Logo/Brand */}
+      <View style={styles.brandContainer}>
+        <LinearGradient
+          colors={theme.gradients.sage as [string, string]}
+          style={styles.logoGradient}
+        >
+          <Ionicons name="leaf" size={32} color="#fff" />
+        </LinearGradient>
+        <Text style={styles.brandName}>Mirific</Text>
+      </View>
+
       <Text style={styles.stepTitle}>{title}</Text>
       <Text style={styles.stepSubtitle}>{subtitle}</Text>
 
@@ -77,28 +89,36 @@ export default function ClerkAccountStep({
         <TouchableOpacity
           style={styles.oauthButton}
           onPress={onGooglePress}
-          disabled={googleLoading || appleLoading}>
+          disabled={googleLoading || appleLoading}
+          activeOpacity={0.8}
+        >
           {googleLoading ? (
             <ActivityIndicator color={theme.colors.textPrimary} />
           ) : (
             <>
-              <Ionicons name="logo-google" size={20} color="#DB4437" />
-              <Text style={styles.oauthButtonText}>Google</Text>
+              <View style={styles.oauthIconContainer}>
+                <Ionicons name="logo-google" size={22} color="#DB4437" />
+              </View>
+              <Text style={styles.oauthButtonText}>Continue with Google</Text>
             </>
           )}
         </TouchableOpacity>
 
         {/* Apple Sign In */}
         <TouchableOpacity
-          style={styles.oauthButton}
+          style={[styles.oauthButton, styles.oauthButtonApple]}
           onPress={onApplePress}
-          disabled={googleLoading || appleLoading}>
+          disabled={googleLoading || appleLoading}
+          activeOpacity={0.8}
+        >
           {appleLoading ? (
-            <ActivityIndicator color={theme.colors.textPrimary} />
+            <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <Ionicons name="logo-apple" size={20} color={theme.colors.textPrimary} />
-              <Text style={styles.oauthButtonText}>Apple</Text>
+              <View style={[styles.oauthIconContainer, styles.oauthIconContainerApple]}>
+                <Ionicons name="logo-apple" size={22} color="#fff" />
+              </View>
+              <Text style={[styles.oauthButtonText, styles.oauthButtonTextApple]}>Continue with Apple</Text>
             </>
           )}
         </TouchableOpacity>
@@ -116,22 +136,48 @@ export default function ClerkAccountStep({
 const styles = StyleSheet.create({
   stepContainer: {
     flex: 1,
+    paddingTop: 40,
+  },
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoGradient: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    ...theme.shadows.medium,
+  },
+  brandName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h1.fontFamily,
+    letterSpacing: -0.5,
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: 8,
+    textAlign: 'center',
+    fontFamily: theme.typography.h1.fontFamily,
+    letterSpacing: -0.5,
   },
   stepSubtitle: {
     fontSize: 16,
     color: theme.colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: 32,
+    textAlign: 'center',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginVertical: 8,
+    gap: 16,
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
@@ -140,39 +186,54 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: theme.colors.textTertiary,
+    fontWeight: '500',
   },
   buttonsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    gap: 14,
+    marginTop: 8,
   },
   oauthButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 12,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    ...theme.shadows.small,
+  },
+  oauthButtonApple: {
+    backgroundColor: theme.colors.textPrimary,
+  },
+  oauthIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  oauthIconContainerApple: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   oauthButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
+  oauthButtonTextApple: {
+    color: '#fff',
+  },
   noteContainer: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+    marginTop: 32,
+    paddingHorizontal: 24,
   },
   noteText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
+    fontSize: 13,
+    color: theme.colors.textTertiary,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });

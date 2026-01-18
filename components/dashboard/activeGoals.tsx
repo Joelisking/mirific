@@ -1,6 +1,7 @@
 import { theme } from '@/constants/theme';
 import { useGetApiGoalsQuery } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -19,14 +20,6 @@ interface ActiveGoalsProps {
 const ActiveGoals = ({ setShowQuickActions, onAddGoal }: ActiveGoalsProps) => {
   const router = useRouter();
   const { data: goals, isLoading } = useGetApiGoalsQuery();
-  // const { setCurrentGoal } = useApp(); // Used to set globally but maybe pass via route params instead?
-  // Actually, setCurrentGoal is context state. We can keep useApp for context actions if needed, 
-  // but let's stick to simple routing if possible, or keep context if CheckIn relies on it.
-  // CheckIn likely relies on Context. So we might need to look at CheckIn later.
-  // For now, let's assume valid ID passing or Context setting is needed.
-  // Let's re-import useApp just for setCurrentGoal to maintain compatibility.
-
-  // Re-importing useApp only for actions, not data
   const { setCurrentGoal } = require('@/contexts/AppContext').useApp();
 
   const handleNavigateToCheckIn = (goalId: string) => {
@@ -37,13 +30,20 @@ const ActiveGoals = ({ setShowQuickActions, onAddGoal }: ActiveGoalsProps) => {
     }
   };
 
+  const getProgressMessage = (progress: number) => {
+    if (progress >= 75) return "Almost there!";
+    if (progress >= 50) return "Halfway done!";
+    if (progress >= 25) return "Great start!";
+    return "Keep going!";
+  };
+
   const activeGoals = goals?.filter(
     (g) => g.status === 'on-track' || g.status === 'at-risk'
   ) || [];
 
   if (isLoading) {
     return (
-      <View style={[styles.card, { minHeight: 200, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.card, styles.loadingCard]}>
         <ActivityIndicator size="small" color={theme.colors.primary} />
       </View>
     );
@@ -53,56 +53,100 @@ const ActiveGoals = ({ setShowQuickActions, onAddGoal }: ActiveGoalsProps) => {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>Active Goals</Text>
-        <TouchableOpacity onPress={() => router.push('/progress')}>
-          <Text style={styles.addButton}>View all</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/progress')}
+          style={styles.viewAllButton}
+        >
+          <Text style={styles.viewAllText}>View all</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.accent} />
         </TouchableOpacity>
       </View>
+
       {activeGoals.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons
-            name="radio-button-off"
-            size={48}
-            color={theme.colors.border}
-          />
+          <View style={styles.emptyIcon}>
+            <Ionicons
+              name="flag-outline"
+              size={36}
+              color={theme.colors.primary}
+            />
+          </View>
           <Text style={styles.emptyText}>No active goals yet</Text>
-          <TouchableOpacity onPress={() => {
-            if (onAddGoal) {
-              onAddGoal();
-            } else {
-              setShowQuickActions(true);
-            }
-          }}>
-            <Text style={styles.emptyButton}>
+          <Text style={styles.emptySubtext}>Set a goal to start your journey</Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => {
+              if (onAddGoal) {
+                onAddGoal();
+              } else {
+                setShowQuickActions(true);
+              }
+            }}
+          >
+            <Ionicons name="add-circle" size={20} color={theme.colors.primary} />
+            <Text style={styles.emptyButtonText}>
               Set your first goal
             </Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.goalsList}>
-          {activeGoals.slice(0, 3).map((goal) => (
-            <TouchableOpacity
-              key={goal.id}
-              style={styles.activeGoalItem}
-              onPress={() => handleNavigateToCheckIn(goal.id!)}>
-              <Text style={styles.goalText}>{goal.text}</Text>
-              <View style={styles.progressContainer}>
-                <View style={styles.progressLabelRow}>
-                  <Text style={styles.progressLabel}>Progress</Text>
-                  <Text style={styles.progressValue}>
-                    {goal.progress || 0}%
-                  </Text>
+          {activeGoals.slice(0, 3).map((goal) => {
+            const progress = goal.progress || 0;
+
+            return (
+              <TouchableOpacity
+                key={goal.id}
+                style={styles.activeGoalItem}
+                onPress={() => handleNavigateToCheckIn(goal.id!)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.goalHeader}>
+                  <Text style={styles.goalText} numberOfLines={2}>{goal.text}</Text>
+                  <View style={styles.progressBadge}>
+                    <Text style={styles.progressBadgeText}>{getProgressMessage(progress)}</Text>
+                  </View>
                 </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${goal.progress || 0}%` },
-                    ]}
-                  />
+
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressLabelRow}>
+                    <Text style={styles.progressLabel}>Progress</Text>
+                    <Text style={styles.progressValue}>{progress}%</Text>
+                  </View>
+
+                  {/* Enhanced progress bar with milestones */}
+                  <View style={styles.progressBarContainer}>
+                    <View style={styles.progressBar}>
+                      <LinearGradient
+                        colors={theme.gradients.sage as [string, string]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[styles.progressFill, { width: `${progress}%` }]}
+                      />
+                    </View>
+
+                    {/* Milestone markers */}
+                    <View style={styles.milestones}>
+                      {[25, 50, 75].map((milestone) => (
+                        <View
+                          key={milestone}
+                          style={[
+                            styles.milestone,
+                            { left: `${milestone}%` },
+                            progress >= milestone && styles.milestoneReached
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+
+                <View style={styles.goalFooter}>
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
     </View>
@@ -112,21 +156,16 @@ const ActiveGoals = ({ setShowQuickActions, onAddGoal }: ActiveGoalsProps) => {
 export default ActiveGoals;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
-    gap: 24,
-  },
   card: {
     gap: 4,
     paddingBottom: 24,
+  },
+  loadingCard: {
+    minHeight: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -142,147 +181,48 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.h2.fontFamily,
     letterSpacing: -0.5,
   },
-  addButton: {
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  viewAllText: {
     fontSize: 14,
     color: theme.colors.accent,
-  },
-  weekDays: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dayCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 12,
-  },
-  dayCardToday: {
-    backgroundColor: theme.colors.primary,
-  },
-  dayName: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  dayNameToday: {
-    color: theme.colors.textPrimary,
-  },
-  dayDate: {
-    fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  dayDateToday: {
-    color: theme.colors.textPrimary,
-  },
-  focusCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: 'theme.colors.accent',
   },
   goalsList: {
-    gap: 8,
-  },
-  goalItem: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.surfaceHighlight,
-  },
-  goalText: {
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-  },
-  goalMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  goalDeadline: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  goalBadge: {
-    backgroundColor: 'theme.colors.surfaceElevated',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  goalBadgeRisk: {
-    backgroundColor: theme.colors.background,
-  },
-  goalBadgeText: {
-    fontSize: 12,
-    color: 'theme.colors.success',
-  },
-  goalBadgeTextRisk: {
-    color: 'theme.colors.primary',
-  },
-  habitsList: {
     gap: 12,
-  },
-  habitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 16,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: theme.colors.primary,
-    borderColor: 'theme.colors.primary',
-  },
-  habitEmoji: {
-    fontSize: 18,
-  },
-  habitName: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  habitNameCompleted: {
-    color: theme.colors.textSecondary,
-    textDecorationLine: 'line-through',
-  },
-  habitTime: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  habitStreak: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  habitStreakNumber: {
-    fontSize: 12,
-    color: 'theme.colors.warning',
-  },
-  habitStreakEmoji: {
-    fontSize: 14,
   },
   activeGoalItem: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
     padding: 20,
-    ...theme.shadows.medium, // Slightly more lift than habits
-    borderWidth: 0,
+    ...theme.shadows.medium,
+  },
+  goalHeader: {
+    marginBottom: 16,
+  },
+  goalText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
+    lineHeight: 22,
+  },
+  progressBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.full,
+  },
+  progressBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   progressContainer: {
-    marginTop: 12,
     gap: 8,
   },
   progressLabelRow: {
@@ -290,188 +230,94 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   progressLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   progressValue: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  progressBarContainer: {
+    position: 'relative',
+    height: 12,
   },
   progressBar: {
-    height: 6,
-    backgroundColor: 'theme.colors.border',
-    borderRadius: 3,
+    height: 10,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: 'theme.colors.accent',
+    borderRadius: 5,
+  },
+  milestones: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 10,
+  },
+  milestone: {
+    position: 'absolute',
+    top: 2,
+    width: 6,
+    height: 6,
     borderRadius: 3,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    marginLeft: -3,
+  },
+  milestoneReached: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  goalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 12,
+    paddingVertical: 32,
+    gap: 8,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  emptySubtext: {
     fontSize: 14,
     color: theme.colors.textSecondary,
   },
   emptyButton: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 32,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    gap: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.borderRadius.full,
   },
-  modalTitle: {
-    fontSize: 20,
+  emptyButtonText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  actionsList: {
-    gap: 8,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    backgroundColor: 'theme.colors.surfaceElevated',
-    borderRadius: 16,
-    padding: 16,
-  },
-  actionEmoji: {
-    fontSize: 24,
-  },
-  actionLabel: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-  },
-  coachButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  coachButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  habitModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  habitModalContent: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 24,
-    gap: 16,
-  },
-  habitModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  habitModalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  habitForm: {
-    gap: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-  },
-  emojiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  emojiOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiOptionSelected: {
-    backgroundColor: theme.colors.background,
-    borderColor: 'theme.colors.accent',
-  },
-  emojiText: {
-    fontSize: 24,
-  },
-  addHabitButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-  },
-  addHabitButtonDisabled: {
-    opacity: 0.5,
-  },
-  addHabitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+    color: theme.colors.primary,
   },
 });

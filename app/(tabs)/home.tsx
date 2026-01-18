@@ -2,10 +2,12 @@ import ActiveGoals from '@/components/dashboard/activeGoals';
 import AddHabitSheet from '@/components/dashboard/AddHabitSheet';
 import DashboardWeeklyCalendar from '@/components/dashboard/calendar';
 import DailyHabits from '@/components/dashboard/dailyHabits';
+import EditHabitSheet from '@/components/dashboard/EditHabitSheet';
 import DashboardDailyFocus from '@/components/dashboard/focus';
 import DashbordHeader from '@/components/dashboard/header';
 import { theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -22,9 +24,11 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showAddHabit, setShowAddHabit] = useState(false);
+  const [showEditHabit, setShowEditHabit] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<any>(null);
   const [sheetInitialType, setSheetInitialType] = useState<'habit' | 'goal'>('habit');
-  const [sheetInitialValues, setSheetInitialValues] = useState<any>(undefined);
   const [sheetInitialId, setSheetInitialId] = useState<string | undefined>(undefined);
+  const [sheetInitialValues, setSheetInitialValues] = useState<any>(undefined);
 
   const openAddSheet = (type: 'habit' | 'goal') => {
     setSheetInitialType(type);
@@ -34,15 +38,8 @@ export default function DashboardScreen() {
   };
 
   const openEditHabit = (habit: any) => {
-    setSheetInitialType('habit');
-    setSheetInitialId(habit.id);
-    setSheetInitialValues({
-      name: habit.name,
-      emoji: habit.emoji,
-      frequency: habit.frequency,
-      reminderTime: habit.reminderTime ? new Date('2024-01-01 ' + habit.reminderTime) : new Date(), // naive parse
-    });
-    setShowAddHabit(true);
+    setEditingHabit(habit);
+    setShowEditHabit(true);
   };
 
   const quickActions = [
@@ -94,442 +91,274 @@ export default function DashboardScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <DashbordHeader />
+    <LinearGradient
+      colors={theme.gradients.warmBeige as [string, string]}
+      style={styles.gradientContainer}
+    >
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <DashbordHeader />
 
-      {/* Stats Bar */}
-      {/* <DashboardStatsBar /> */}
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {/* Week Calendar */}
+          <DashboardWeeklyCalendar />
 
-      {/* Scrollable Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Week Calendar */}
-        <DashboardWeeklyCalendar />
+          {/* Today's Focus */}
+          <DashboardDailyFocus onAddGoal={() => openAddSheet('goal')} />
 
-        {/* Today's Focus */}
-        <DashboardDailyFocus onAddGoal={() => openAddSheet('goal')} />
+          {/* Daily Habits */}
+          <DailyHabits
+            setShowAddHabit={(show) => show ? openAddSheet('habit') : setShowAddHabit(false)}
+            onEditHabit={openEditHabit}
+          />
 
-        {/* Daily Habits */}
-        <DailyHabits
-          setShowAddHabit={(show) => show ? openAddSheet('habit') : setShowAddHabit(false)}
-          onEditHabit={openEditHabit}
-        />
+          {/* Active Goals */}
+          <ActiveGoals
+            setShowQuickActions={setShowQuickActions}
+            onAddGoal={() => openAddSheet('goal')}
+          />
+        </ScrollView>
 
-        {/* Active Goals */}
-        <ActiveGoals
-          setShowQuickActions={setShowQuickActions}
-          onAddGoal={() => openAddSheet('goal')}
-        />
-      </ScrollView>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowQuickActions(true)}>
-        <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
-
-      {/* Quick Actions Modal */}
-      <Modal
-        visible={showQuickActions}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowQuickActions(false)}>
+        {/* Floating Action Button with gradient */}
         <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowQuickActions(false)}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Ionicons
-                  name="sparkles"
-                  size={24}
-                  color={theme.colors.accent}
-                />
-                <Text style={styles.modalTitle}>
-                  What would you like to do?
-                </Text>
+          style={styles.fabContainer}
+          onPress={() => setShowQuickActions(true)}
+          activeOpacity={0.9}
+        >
+          <LinearGradient
+            colors={theme.gradients.sage as [string, string]}
+            style={styles.fab}
+          >
+            <Ionicons name="add" size={28} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Quick Actions Modal */}
+        <Modal
+          visible={showQuickActions}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowQuickActions(false)}>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowQuickActions(false)}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHandle} />
+
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleRow}>
+                  <View style={styles.modalIcon}>
+                    <Ionicons
+                      name="sparkles"
+                      size={20}
+                      color={theme.colors.accent}
+                    />
+                  </View>
+                  <Text style={styles.modalTitle}>
+                    What's on your mind?
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowQuickActions(false)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons
+                    name="close"
+                    size={22}
+                    color={theme.colors.textSecondary}
+                  />
+                </TouchableOpacity>
               </View>
+
+              <View style={styles.actionsList}>
+                {quickActions.map((action) => (
+                  <TouchableOpacity
+                    key={action.id}
+                    style={styles.actionItem}
+                    onPress={action.action}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.actionEmoji}>
+                      {action.emoji}
+                    </Text>
+                    <Text style={styles.actionLabel}>
+                      {action.label}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <TouchableOpacity
-                onPress={() => setShowQuickActions(false)}>
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
+                style={styles.coachButton}
+                onPress={() => {
+                  setShowQuickActions(false);
+                  router.push('/coach');
+                }}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={theme.gradients.sage as [string, string]}
+                  style={styles.coachButtonGradient}
+                >
+                  <Ionicons name="chatbubble-ellipses" size={20} color="#fff" />
+                  <Text style={styles.coachButtonText}>
+                    Talk to your coach
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
+          </TouchableOpacity>
+        </Modal>
 
-            <View style={styles.actionsList}>
-              {quickActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  style={styles.actionItem}
-                  onPress={action.action}>
-                  <Text style={styles.actionEmoji}>
-                    {action.emoji}
-                  </Text>
-                  <Text style={styles.actionLabel}>
-                    {action.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        {/* Add Habit Sheet */}
+        <AddHabitSheet
+          visible={showAddHabit}
+          onClose={() => setShowAddHabit(false)}
+          initialType={sheetInitialType}
+          initialValues={sheetInitialValues}
+          initialId={sheetInitialId}
+        />
 
-            <TouchableOpacity
-              style={styles.coachButton}
-              onPress={() => {
-                setShowQuickActions(false);
-                router.push('/coach');
-              }}>
-              <Ionicons name="mic" size={20} color="#fff" />
-              <Text style={styles.coachButtonText}>
-                Talk to your coach
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Add Habit Sheet */}
-      <AddHabitSheet
-        visible={showAddHabit}
-        onClose={() => setShowAddHabit(false)}
-        initialType={sheetInitialType}
-        initialValues={sheetInitialValues}
-        initialId={sheetInitialId}
-      />
-    </SafeAreaView>
+        {/* Edit Habit Sheet */}
+        <EditHabitSheet
+          visible={showEditHabit}
+          onClose={() => {
+            setShowEditHabit(false);
+            setEditingHabit(null);
+          }}
+          habit={editingHabit}
+        />
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16, // More breathing room
+    paddingHorizontal: 20,
     paddingBottom: 100,
-    gap: 20, // Increased gap for airy feel
+    gap: 24,
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16, // Sharper
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    // No shadow for flat minimalist look
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    fontFamily: theme.typography.h2.fontFamily,
-    letterSpacing: -0.5,
-  },
-  addButton: {
-    fontSize: 15,
-    color: theme.colors.primary, // Use primary instead of accent
-    fontWeight: '500',
-  },
-  weekDays: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dayCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.02)', // Subtle background
-  },
-  dayCardToday: {
-    backgroundColor: theme.colors.primary,
-    ...theme.shadows.small,
-  },
-  dayName: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dayNameToday: {
-    color: 'rgba(255,255,255,0.8)',
-  },
-  dayDate: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  dayDateToday: {
-    color: '#fff',
-  },
-  focusCard: {
-    backgroundColor: theme.colors.surface,
+  fabContainer: {
+    position: 'absolute',
+    bottom: 96,
+    right: 24,
     borderRadius: theme.borderRadius.xl,
-    padding: 24,
-    ...theme.shadows.medium, // Elevated for focus
-    borderWidth: 0,
-  },
-  goalsList: {
-    gap: 12,
-  },
-  goalItem: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: 16,
-    padding: 16,
-    ...theme.shadows.small,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  goalText: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  goalMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  goalDeadline: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  goalBadge: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  goalBadgeRisk: {
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-  },
-  goalBadgeText: {
-    fontSize: 13,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  goalBadgeTextRisk: {
-    color: theme.colors.error, // Keep error red for distinct risk
-  },
-  habitsList: {
-    gap: 12,
-  },
-  habitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    padding: 16,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    ...theme.shadows.small,
-  },
-  checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14, // Circle checkbox
-    borderWidth: 2,
-    borderColor: theme.colors.border, // Muted border
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceElevated,
-  },
-  checkboxChecked: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  habitEmoji: {
-    fontSize: 20,
-  },
-  habitName: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  habitNameCompleted: {
-    color: theme.colors.textSecondary,
-    textDecorationLine: 'line-through',
-    opacity: 0.7,
-  },
-  habitTime: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  habitStreak: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-  },
-  habitStreakNumber: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: '600',
-  },
-  habitStreakEmoji: {
-    fontSize: 12,
-  },
-  activeGoalItem: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    padding: 20,
-    ...theme.shadows.small,
-  },
-  progressContainer: {
-    marginTop: 16,
-    gap: 8,
-  },
-  progressLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  progressLabel: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  progressValue: {
-    fontSize: 13,
-    color: theme.colors.primary,
-    fontWeight: '700',
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    gap: 16,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.typography.h3.fontFamily, // Serif nuance
-    fontStyle: 'italic',
-  },
-  emptyButton: {
-    fontSize: 15,
-    color: theme.colors.primary,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    ...theme.shadows.large,
   },
   fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 16, // Squircle
-    backgroundColor: theme.colors.primary,
+    width: 60,
+    height: 60,
+    borderRadius: theme.borderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 90, 79, 0.4)', // Themed overlay
+    backgroundColor: theme.colors.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: 24, // Sharper
-    borderTopRightRadius: 24,
-    padding: 32,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderTopLeftRadius: theme.borderRadius.xxl,
+    borderTopRightRadius: theme.borderRadius.xxl,
+    padding: 24,
     paddingBottom: 48,
-    gap: 24,
-    // Flat top sheet
+    gap: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
   modalTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  modalIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: 'rgba(196, 149, 106, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     fontFamily: theme.typography.h2.fontFamily,
   },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionsList: {
-    gap: 12,
+    gap: 10,
   },
   actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: theme.borderRadius.lg,
+    padding: 16,
     ...theme.shadows.small,
   },
   actionEmoji: {
-    fontSize: 28,
+    fontSize: 24,
   },
   actionLabel: {
-    fontSize: 17,
+    flex: 1,
+    fontSize: 16,
     color: theme.colors.textPrimary,
     fontWeight: '500',
-    flex: 1,
   },
   coachButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 20,
-    padding: 20,
+    marginTop: 8,
+    borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
+    ...theme.shadows.medium,
+  },
+  coachButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    marginTop: 8,
-    ...theme.shadows.medium,
+    padding: 18,
   },
   coachButtonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#fff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 });

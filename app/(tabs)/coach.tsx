@@ -5,6 +5,7 @@ import { addMessage, createSession, deleteSession, Message, setActiveSession } f
 import { RootState } from '@/lib/redux/store';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -37,7 +38,6 @@ interface HabitSuggestion {
   reminderTime: string;
 }
 
-// Helper for API URL
 const getApiBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
@@ -55,7 +55,6 @@ export default function ChatScreen() {
   const { getToken } = useAuth();
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Redux
   const dispatch = useDispatch();
   const { sessions, activeSessionId } = useSelector((state: RootState) => state.chat);
 
@@ -66,19 +65,16 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  // Sheet State
   const [showSheet, setShowSheet] = useState(false);
   const [sheetType, setSheetType] = useState<'habit' | 'goal'>('habit');
   const [sheetInitialValues, setSheetInitialValues] = useState<any>(undefined);
 
-  // Initialize new chat if none exists
   useEffect(() => {
     if (!activeSessionId) {
       createNewChat();
     }
   }, [activeSessionId]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -123,7 +119,6 @@ export default function ChatScreen() {
         content: m.text
       })).slice(-6);
 
-      // Inject system context with date
       const systemContext = {
         role: 'system',
         content: `Current Date: ${new Date().toISOString().split('T')[0]}. Ensure all date suggestions are in the future relative to this date.`
@@ -162,7 +157,6 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('AI Chat Error:', error);
       Alert.alert('Error', 'I had trouble connecting. Please try again.');
-      // Add error message to chat locally? Or just toast.
     } finally {
       setIsTyping(false);
     }
@@ -181,8 +175,6 @@ export default function ChatScreen() {
     dispatch(addMessage({ sessionId: activeSessionId, message: userMessage }));
     setInputText('');
 
-    // Optimistic update for UI, but rely on Redux for logic
-    // New history includes this message
     const newHistory = [...messages, userMessage];
     sendMessageToBackend(text, newHistory);
   };
@@ -235,229 +227,274 @@ export default function ChatScreen() {
     ])
   }
 
-  // Sort sessions by last active
   const sortedSessions = Object.values(sessions).sort((a, b) => b.lastMessageAt - a.lastMessageAt);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoGradient}>
-                <Ionicons name="sparkles" size={20} color="#000" />
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.headerTitle}>Mirific AI</Text>
-              <Text style={styles.headerSubtitle}>Your Personal Coach</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.historyButton}
-              onPress={() => setShowHistory(true)}
-            >
-              <Ionicons name="time-outline" size={22} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Messages */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
+    <LinearGradient
+      colors={theme.gradients.warmBeige as [string, string]}
+      style={styles.gradientContainer}
+    >
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {messages.map((message) => (
-            <View key={message.id}>
-              <View
-                style={[
-                  styles.messageWrapper,
-                  message.type === 'user'
-                    ? styles.messageWrapperUser
-                    : styles.messageWrapperAI,
-                ]}
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={theme.gradients.sage as [string, string]}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="sparkles" size={20} color="#fff" />
+                </LinearGradient>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.headerTitle}>Mirific AI</Text>
+                <Text style={styles.headerSubtitle}>Your Personal Coach</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => setShowHistory(true)}
               >
+                <Ionicons name="time-outline" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Messages */}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+          >
+            {messages.map((message) => (
+              <View key={message.id}>
                 <View
                   style={[
-                    styles.messageBubble,
+                    styles.messageWrapper,
                     message.type === 'user'
-                      ? styles.messageBubbleUser
-                      : styles.messageBubbleAI,
+                      ? styles.messageWrapperUser
+                      : styles.messageWrapperAI,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.messageText,
-                      message.type === 'user' && styles.messageTextUser,
-                    ]}
+                  {message.type === 'user' ? (
+                    <LinearGradient
+                      colors={theme.gradients.sage as [string, string]}
+                      style={[styles.messageBubble, styles.messageBubbleUser]}
+                    >
+                      <Text style={[styles.messageText, styles.messageTextUser]}>
+                        {message.text}
+                      </Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={[styles.messageBubble, styles.messageBubbleAI]}>
+                      <Text style={styles.messageText}>
+                        {message.text}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Goal Proposal Card */}
+                {message.goalSuggestion && (
+                  <View style={styles.proposalContainer}>
+                    <View style={styles.proposalCard}>
+                      <View style={styles.proposalHeader}>
+                        <Text style={styles.proposalEmoji}>{message.goalSuggestion.emoji}</Text>
+                        <View style={styles.proposalBadge}>
+                          <Text style={styles.proposalBadgeText}>Goal Proposal</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.proposalText}>{message.goalSuggestion.text}</Text>
+                      <View style={styles.proposalMeta}>
+                        <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
+                        <Text style={styles.proposalDate}>Target: {formatDate(message.goalSuggestion.deadline)}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.proposalButton}
+                        onPress={() => handleCreateGoal(message.goalSuggestion!)}
+                        activeOpacity={0.9}
+                      >
+                        <LinearGradient
+                          colors={theme.gradients.sage as [string, string]}
+                          style={styles.proposalButtonGradient}
+                        >
+                          <Text style={styles.proposalButtonText}>Review & Save</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#fff" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Habit Proposal Card */}
+                {message.habitSuggestion && (
+                  <View style={styles.proposalContainer}>
+                    <View style={[styles.proposalCard, styles.habitProposalCard]}>
+                      <View style={styles.proposalHeader}>
+                        <Text style={styles.proposalEmoji}>{message.habitSuggestion.emoji}</Text>
+                        <View style={[styles.proposalBadge, styles.habitProposalBadge]}>
+                          <Text style={[styles.proposalBadgeText, { color: theme.colors.accent }]}>Habit Proposal</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.proposalText}>{message.habitSuggestion.name}</Text>
+                      <View style={styles.habitProposalMeta}>
+                        <View style={styles.metaChip}>
+                          <Ionicons name="repeat-outline" size={14} color={theme.colors.textSecondary} />
+                          <Text style={styles.metaChipText}>{message.habitSuggestion.frequency}</Text>
+                        </View>
+                        <View style={styles.metaChip}>
+                          <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
+                          <Text style={styles.metaChipText}>{message.habitSuggestion.reminderTime}</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.proposalButton}
+                        onPress={() => handleCreateHabit(message.habitSuggestion!)}
+                        activeOpacity={0.9}
+                      >
+                        <LinearGradient
+                          colors={theme.gradients.sunsetAccent as [string, string]}
+                          style={styles.proposalButtonGradient}
+                        >
+                          <Text style={styles.proposalButtonText}>Review & Save</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#fff" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            ))}
+
+            {isTyping && (
+              <View style={[styles.messageWrapper, styles.messageWrapperAI]}>
+                <View style={[styles.messageBubble, styles.messageBubbleAI, styles.typingBubble]}>
+                  <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                </View>
+              </View>
+            )}
+
+            {/* Quick start suggestions */}
+            {messages.length <= 1 && !isTyping && (
+              <View style={styles.suggestionsContainer}>
+                <Text style={styles.suggestionsTitle}>Quick starts</Text>
+                {suggestions.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.suggestionButton}
+                    onPress={() => handleSendMessage(suggestion)}
+                    activeOpacity={0.8}
                   >
-                    {message.text}
-                  </Text>
-                </View>
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                    <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                ))}
               </View>
+            )}
 
-              {/* Suggestions Cards (Goal/Habit) */}
-              {message.goalSuggestion && (
-                <View style={styles.goalProposalContainer}>
-                  <View style={styles.goalProposalCard}>
-                    <View style={styles.goalProposalHeader}>
-                      <Text style={styles.goalProposalEmoji}>{message.goalSuggestion.emoji}</Text>
-                      <Text style={styles.goalProposalTitle}>Goal Proposal</Text>
-                    </View>
-                    <Text style={styles.goalProposalText}>{message.goalSuggestion.text}</Text>
-                    <View style={styles.goalProposalMeta}>
-                      <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.goalProposalDate}>Target: {formatDate(message.goalSuggestion.deadline)}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.lockInButton}
-                      onPress={() => handleCreateGoal(message.goalSuggestion!)}
-                    >
-                      <Text style={styles.lockInButtonText}>Review & Save ⚡️</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-              {/* Similar block for Habit Suggestion can be kept if needed, omitted for brevity if identical pattern */}
-              {/* Habit Suggestion Card */}
-              {message.habitSuggestion && (
-                <View style={styles.habitProposalContainer}>
-                  <View style={styles.habitProposalCard}>
-                    <View style={styles.habitProposalHeader}>
-                      <Text style={styles.habitProposalEmoji}>{message.habitSuggestion.emoji}</Text>
-                      <Text style={styles.habitProposalTitle}>Habit Proposal</Text>
-                    </View>
-                    <Text style={styles.habitProposalText}>{message.habitSuggestion.name}</Text>
-                    <View style={styles.habitProposalMeta}>
-                      <Ionicons name="repeat-outline" size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.habitProposalFrequency}>{message.habitSuggestion.frequency}</Text>
-                      <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} style={{ marginLeft: 12 }} />
-                      <Text style={styles.habitProposalTime}>{message.habitSuggestion.reminderTime}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.lockInHabitButton}
-                      onPress={() => handleCreateHabit(message.habitSuggestion!)}
-                    >
-                      <Text style={styles.lockInHabitButtonText}>Review & Save ⚡️</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
+          </ScrollView>
 
-          {isTyping && (
-            <View style={[styles.messageWrapper, styles.messageWrapperAI]}>
-              <View style={[styles.messageBubble, styles.messageBubbleAI, { paddingVertical: 16 }]}>
-                <ActivityIndicator size="small" color={theme.colors.textSecondary} />
-              </View>
-            </View>
-          )}
-
-          {/* Suggestions: Only show if new chat (<= 1 message which is the initial greeting) */}
-          {messages.length <= 1 && !isTyping && (
-            <View style={styles.suggestionsContainer}>
-              <Text style={styles.suggestionsTitle}>Quick starts:</Text>
-              {suggestions.map((suggestion, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.suggestionButton}
-                  onPress={() => handleSendMessage(suggestion)}
+          {/* Input */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="What's on your mind?"
+                placeholderTextColor={theme.colors.textTertiary}
+                onSubmitEditing={() => handleSendMessage(inputText)}
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+                onPress={() => handleSendMessage(inputText)}
+                disabled={!inputText.trim()}
+              >
+                <LinearGradient
+                  colors={inputText.trim() ? theme.gradients.sage as [string, string] : [theme.colors.border, theme.colors.border]}
+                  style={styles.sendButtonGradient}
                 >
-                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                  <Ionicons name="send" size={16} color={inputText.trim() ? '#fff' : theme.colors.textTertiary} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+
+        <AddHabitSheet
+          visible={showSheet}
+          onClose={() => setShowSheet(false)}
+          initialType={sheetType}
+          initialValues={sheetInitialValues}
+        />
+
+        {/* History Modal */}
+        <Modal
+          visible={showHistory}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowHistory(false)}
+        >
+          <LinearGradient
+            colors={theme.gradients.warmBeige as [string, string]}
+            style={styles.modalContainer}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chat History</Text>
+              <TouchableOpacity onPress={() => setShowHistory(false)}>
+                <Text style={styles.modalClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.newChatContainer}>
+              <TouchableOpacity style={styles.newChatButton} onPress={createNewChat} activeOpacity={0.9}>
+                <LinearGradient
+                  colors={theme.gradients.sage as [string, string]}
+                  style={styles.newChatButtonGradient}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                  <Text style={styles.newChatText}>Start New Chat</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.historyList}>
+              {sortedSessions.map((session) => (
+                <TouchableOpacity
+                  key={session.id}
+                  style={[styles.historyItem, activeSessionId === session.id && styles.historyItemActive]}
+                  onPress={() => {
+                    dispatch(setActiveSession(session.id));
+                    setShowHistory(false);
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.historyTitle} numberOfLines={1}>{session.title}</Text>
+                    <Text style={styles.historyDate}>{formatHistoryDate(session.lastMessageAt)}</Text>
+                  </View>
+                  <TouchableOpacity onPress={(e) => handleDeleteSession(session.id, e)} style={{ padding: 8 }}>
+                    <Ionicons name="trash-outline" size={18} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))}
-            </View>
-          )}
-
-        </ScrollView>
-
-        {/* Input */}
-        <View style={styles.inputContainer}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Type your goal..."
-              placeholderTextColor={theme.colors.textSecondary}
-              onSubmitEditing={() => handleSendMessage(inputText)}
-            />
-            <TouchableOpacity
-              style={styles.sendButton}
-              onPress={() => handleSendMessage(inputText)}
-              disabled={!inputText.trim()}
-            >
-              <Ionicons name="send" size={16} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-
-      <AddHabitSheet
-        visible={showSheet}
-        onClose={() => setShowSheet(false)}
-        initialType={sheetType}
-        initialValues={sheetInitialValues}
-      />
-
-      {/* HISTORY MODAL */}
-      <Modal
-        visible={showHistory}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowHistory(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Chat History</Text>
-            <TouchableOpacity onPress={() => setShowHistory(false)}>
-              <Text style={styles.modalClose}>Close</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.newChatContainer}>
-            <TouchableOpacity style={styles.newChatButton} onPress={createNewChat}>
-              <Ionicons name="add" size={20} color="#fff" />
-              <Text style={styles.newChatText}>Start New Chat</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.historyList}>
-            {sortedSessions.map((session) => (
-              <TouchableOpacity
-                key={session.id}
-                style={[styles.historyItem, activeSessionId === session.id && styles.historyItemActive]}
-                onPress={() => {
-                  dispatch(setActiveSession(session.id));
-                  setShowHistory(false);
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.historyTitle} numberOfLines={1}>{session.title}</Text>
-                  <Text style={styles.historyDate}>{formatHistoryDate(session.lastMessageAt)}</Text>
-                </View>
-                <TouchableOpacity onPress={(e) => handleDeleteSession(session.id, e)} style={{ padding: 8 }}>
-                  <Ionicons name="trash-outline" size={18} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
-    </SafeAreaView>
+            </ScrollView>
+          </LinearGradient>
+        </Modal>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     marginBottom: 55,
   },
   keyboardView: {
@@ -466,8 +503,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     paddingVertical: 16,
-    backgroundColor: theme.colors.background, // Seamless header
-    borderBottomWidth: 0,
   },
   headerContent: {
     flexDirection: 'row',
@@ -475,45 +510,40 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   logoContainer: {
-    width: 48,
-    height: 48,
     borderRadius: 24,
     ...theme.shadows.small,
   },
   logoGradient: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: theme.colors.surface,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 24,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     fontFamily: theme.typography.h1.fontFamily,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic',
     marginTop: 2,
   },
   historyButton: {
     padding: 10,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.full,
     ...theme.shadows.small,
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   messagesContent: {
     padding: 24,
-    gap: 24, // Wider gap between messages
+    gap: 16,
     paddingBottom: 100,
   },
   messageWrapper: {
@@ -530,16 +560,18 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 16, // Sharper
-    // No shadow
+    borderRadius: theme.borderRadius.lg,
   },
   messageBubbleUser: {
-    backgroundColor: theme.colors.primary, // Indigo
     borderBottomRightRadius: 4,
   },
   messageBubbleAI: {
-    backgroundColor: theme.colors.surfaceHighlight, // Light Gray
+    backgroundColor: theme.colors.surfaceElevated,
     borderBottomLeftRadius: 4,
+    ...theme.shadows.small,
+  },
+  typingBubble: {
+    paddingVertical: 16,
   },
   messageText: {
     fontSize: 16,
@@ -550,166 +582,127 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Goal Proposal Styles
-  goalProposalContainer: {
+  // Proposal Cards
+  proposalContainer: {
     alignItems: 'flex-start',
-    marginTop: 16,
+    marginTop: 12,
     marginBottom: 8,
     width: '100%',
   },
-  goalProposalCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 24,
+  proposalCard: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+    padding: 20,
     width: '90%',
     ...theme.shadows.medium,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.primary,
   },
-  goalProposalHeader: {
+  habitProposalCard: {
+    borderLeftColor: theme.colors.accent,
+  },
+  proposalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 12,
   },
-  goalProposalEmoji: {
+  proposalEmoji: {
     fontSize: 28,
   },
-  goalProposalTitle: {
-    fontSize: 14,
+  proposalBadge: {
+    backgroundColor: theme.colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.full,
+  },
+  habitProposalBadge: {
+    backgroundColor: 'rgba(196, 149, 106, 0.15)',
+  },
+  proposalBadgeText: {
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
-  goalProposalText: {
-    fontSize: 20,
+  proposalText: {
+    fontSize: 18,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     marginBottom: 12,
-    fontFamily: theme.typography.h2.fontFamily,
+    lineHeight: 24,
   },
-  goalProposalMeta: {
+  proposalMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    marginBottom: 16,
+    backgroundColor: theme.colors.surface,
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.sm,
   },
-  goalProposalDate: {
+  proposalDate: {
     fontSize: 14,
     color: theme.colors.textSecondary,
     fontWeight: '500',
   },
-  lockInButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    ...theme.shadows.small,
-  },
-  lockInButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-
-  // Habit Proposal Styles
-  habitProposalContainer: {
-    alignItems: 'flex-start',
-    marginTop: 16,
-    marginBottom: 8,
-    width: '100%',
-  },
-  habitProposalCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 24,
-    width: '90%',
-    ...theme.shadows.medium,
-  },
-  habitProposalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  habitProposalEmoji: {
-    fontSize: 28,
-  },
-  habitProposalTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.success, // Keep green for habits? Or use secondary accent? Let's use accent (Green)
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  habitProposalText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 12,
-    fontFamily: theme.typography.h2.fontFamily,
-  },
   habitProposalMeta: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 16,
     flexWrap: 'wrap',
   },
-  habitProposalFrequency: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  habitProposalTime: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  lockInHabitButton: {
-    backgroundColor: theme.colors.accent, // Green accent
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 16,
+  metaChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'stretch',
-    ...theme.shadows.small,
+    gap: 6,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.sm,
   },
-  lockInHabitButtonText: {
+  metaChipText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
+  },
+  proposalButton: {
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  proposalButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+  },
+  proposalButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
 
   suggestionsContainer: {
-    gap: 12,
+    gap: 10,
     paddingTop: 16,
-    alignItems: 'center',
   },
   suggestionsTitle: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic',
+    fontWeight: '500',
     marginBottom: 4,
   },
   suggestionButton: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: 16,
     paddingVertical: 14,
     ...theme.shadows.small,
   },
@@ -717,26 +710,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.textPrimary,
     fontWeight: '500',
+    flex: 1,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    // marginBottom: 65, // Clear the tab bar
-    backgroundColor: theme.colors.background, // Transparent-ish
   },
   inputWrapper: {
-    flex: 1,
-    flexDirection: 'row', // Changed from default
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderRadius: 32, // Pill shape
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.full,
     padding: 6,
     paddingLeft: 20,
     ...theme.shadows.medium,
-    borderWidth: 0,
   },
   input: {
     flex: 1,
@@ -746,18 +733,23 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
+    borderRadius: theme.borderRadius.full,
+    overflow: 'hidden',
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendButtonGradient: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 22,
   },
 
-  // MODAL STYLES
+  // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     padding: 24,
   },
   modalHeader: {
@@ -769,7 +761,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     fontFamily: theme.typography.h1.fontFamily,
   },
@@ -782,14 +774,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   newChatButton: {
+    borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
+    ...theme.shadows.small,
+  },
+  newChatButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
     padding: 18,
-    borderRadius: 20,
     gap: 8,
-    ...theme.shadows.small,
   },
   newChatText: {
     color: '#fff',
@@ -803,15 +797,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
+    padding: 16,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.lg,
     marginBottom: 12,
     ...theme.shadows.small,
-    borderWidth: 0,
   },
   historyItemActive: {
-    backgroundColor: theme.colors.surfaceElevated,
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.primary,
   },
@@ -826,4 +818,3 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
 });
-

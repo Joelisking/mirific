@@ -1,61 +1,69 @@
 /**
  * Mirific App Theme
- * Design inspired by UI mockups with dark theme and warm accent colors
+ * Design: Soft/Organic with warm sage greens and beige undertones
  */
 
 import { Platform } from 'react-native';
 
-// Mirific Brand Colors (Minimalist Indigo)
+// Mirific Brand Colors (Soft Organic Theme)
 export const theme = {
   colors: {
-    // Primary theme (Crisp White & Electric Indigo)
-    background: '#FFFFFF', // Pure White
-    surface: '#F9FAFB', // Cool Gray 50 (Very subtle contrast)
-    surfaceElevated: '#FFFFFF',
-    surfaceHighlight: '#F3F4F6', // Cool Gray 100
+    // Backgrounds & Surfaces (Warm Beige Undertone)
+    background: '#F5F0E8', // Warm beige
+    surface: '#FAF6F0', // Light beige
+    surfaceElevated: '#FFFCF7', // Cream white
+    surfaceHighlight: '#EDE6DB', // Sandy beige
 
-    // Accents
-    primary: '#4F46E5', // Electric Indigo
-    primaryDark: '#3730A3', // Deep Indigo
-    primaryLight: '#C7D2FE', // Soft Indigo
-    accent: '#10B981', // Emerald Green (Digital success color)
+    // Primary & Accent
+    primary: '#5B8A72', // Soft Sage
+    primaryDark: '#426B59', // Deep Sage
+    primaryLight: '#D4E7DC', // Light Sage
+    accent: '#C4956A', // Warm Terracotta
 
-    // Text colors
-    textPrimary: '#111827', // Gray 900 (Almost Black)
-    textSecondary: '#6B7280', // Gray 500
-    textTertiary: '#9CA3AF', // Gray 400
-    textInverse: '#FFFFFF',
+    // Text colors (Warm tones)
+    textPrimary: '#2D3128', // Warm dark
+    textSecondary: '#7A7B6E', // Warm gray
+    textTertiary: '#A8A99A', // Light warm gray
+    textInverse: '#FFFCF7',
 
-    // Status colors
-    success: '#10B981', // Emerald
-    warning: '#F59E0B', // Amber
-    error: '#EF4444', // Red 500
-    info: '#4F46E5', // Indigo
-    onTrack: '#10B981',
-    atRisk: '#EF4444',
+    // Status colors (Softer)
+    success: '#6B9B7A', // Muted sage
+    warning: '#E8A756', // Soft amber
+    error: '#D97373', // Soft coral
+    info: '#5B8A72', // Sage (same as primary)
+    onTrack: '#6B9B7A', // Muted sage
+    atRisk: '#D97373', // Soft coral
 
     // UI elements
-    border: '#E5E7EB', // Gray 200
-    divider: '#F3F4F6',
-    overlay: 'rgba(17, 24, 39, 0.4)', // Darker overlay
+    border: '#E0D9CF', // Warm beige border
+    divider: '#EDE6DB', // Sandy beige
+    overlay: 'rgba(45, 49, 40, 0.4)', // Warm dark overlay
 
     // Legacy support
     light: {
-      text: '#111827',
-      background: '#FFFFFF',
-      tint: '#4F46E5',
-      icon: '#6B7280',
-      tabIconDefault: '#9CA3AF',
-      tabIconSelected: '#4F46E5',
+      text: '#2D3128',
+      background: '#F5F0E8',
+      tint: '#5B8A72',
+      icon: '#7A7B6E',
+      tabIconDefault: '#A8A99A',
+      tabIconSelected: '#5B8A72',
     },
     dark: {
-      text: '#111827',
-      background: '#FFFFFF',
-      tint: '#4F46E5',
-      icon: '#6B7280',
-      tabIconDefault: '#9CA3AF',
-      tabIconSelected: '#4F46E5',
+      text: '#2D3128',
+      background: '#F5F0E8',
+      tint: '#5B8A72',
+      icon: '#7A7B6E',
+      tabIconDefault: '#A8A99A',
+      tabIconSelected: '#5B8A72',
     },
+  },
+
+  // Gradients for visual interest
+  gradients: {
+    warmBeige: ['#F5F0E8', '#FAF6F0'], // Screen backgrounds
+    sage: ['#5B8A72', '#426B59'], // Buttons/CTAs
+    success: ['#6B9B7A', '#5B8A72'], // Completions
+    sunsetAccent: ['#E8A756', '#C4956A'], // Highlights/Streaks
   },
 
   spacing: {
@@ -67,18 +75,19 @@ export const theme = {
     xxl: 48,
   },
 
+  // Softer corners
   borderRadius: {
-    sm: 6,
-    md: 8,
-    lg: 12,
-    xl: 16, // Sharper corners for modern feel
-    xxl: 24,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    xxl: 28,
     full: 9999,
   },
 
   typography: {
     h1: {
-      fontSize: 34, // iOS Title 1 size
+      fontSize: 34,
       fontWeight: '700' as const,
       lineHeight: 40,
       fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
@@ -95,7 +104,7 @@ export const theme = {
       fontSize: 18,
       fontWeight: '600' as const,
       lineHeight: 24,
-       fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
+      fontFamily: Platform.select({ ios: 'System', default: 'sans-serif' }),
     },
     body: {
       fontSize: 16,
@@ -118,27 +127,36 @@ export const theme = {
     },
   },
 
+  // Warm-tinted shadows (sage-based)
   shadows: {
     small: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
+      shadowColor: '#5B8A72',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 2,
     },
     medium: {
-      shadowColor: '#000',
+      shadowColor: '#5B8A72',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 4,
     },
     large: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.1,
-      shadowRadius: 16,
-      elevation: 6,
+      shadowColor: '#5B8A72',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.16,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+    // Special glow effect for streaks
+    streakGlow: {
+      shadowColor: '#E8A756',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 4,
     },
   },
 };

@@ -3,6 +3,7 @@ import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
 import { useDeleteApiGoalsByIdMutation, useGetApiGoalsQuery, usePatchApiGoalsByIdMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -27,22 +28,20 @@ export default function TimelineScreen() {
   const [deleteGoal] = useDeleteApiGoalsByIdMutation();
   const [updateGoal] = usePatchApiGoalsByIdMutation();
 
-  // Edit State
   const [showEditSheet, setShowEditSheet] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [editInitialValues, setEditInitialValues] = useState<any>(null);
 
-  // ... (previous helper functions: getStatusColor, getStatusLabel, formatDate) ...
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'on-track':
-        return { bg: 'rgba(34, 197, 94, 0.1)', text: theme.colors.onTrack, border: theme.colors.onTrack, icon: 'checkmark-circle' };
+        return { bg: 'rgba(107, 155, 122, 0.12)', text: theme.colors.onTrack, border: theme.colors.onTrack, icon: 'checkmark-circle' };
       case 'at-risk':
-        return { bg: 'rgba(239, 68, 68, 0.1)', text: theme.colors.atRisk, border: theme.colors.atRisk, icon: 'alert-circle' };
+        return { bg: 'rgba(217, 115, 115, 0.12)', text: theme.colors.atRisk, border: theme.colors.atRisk, icon: 'alert-circle' };
       case 'completed':
-        return { bg: 'rgba(34, 197, 94, 0.2)', text: theme.colors.success, border: theme.colors.success, icon: 'trophy' };
+        return { bg: 'rgba(107, 155, 122, 0.2)', text: theme.colors.success, border: theme.colors.success, icon: 'trophy' };
       default:
-        return { bg: theme.colors.surfaceElevated, text: theme.colors.textSecondary, border: theme.colors.border, icon: 'ellipse-outline' };
+        return { bg: theme.colors.surfaceHighlight, text: theme.colors.textSecondary, border: theme.colors.border, icon: 'ellipse-outline' };
     }
   };
 
@@ -138,11 +137,10 @@ export default function TimelineScreen() {
     );
   };
 
-  // SWIPE ACTIONS
   const RightAction = ({ prog, drag, onEdit, onDelete }: any) => {
     const styleAnimation = useAnimatedStyle(() => {
       return {
-        transform: [{ translateX: drag.value + 120 }], // 60 width * 2 buttons
+        transform: [{ translateX: drag.value + 120 }],
       };
     });
 
@@ -192,137 +190,184 @@ export default function TimelineScreen() {
   }) : [];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Progress</Text>
-      </View>
+    <LinearGradient
+      colors={theme.gradients.warmBeige as [string, string]}
+      style={styles.gradientContainer}
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Progress</Text>
+        </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Points Banner */}
-        <TouchableOpacity
-          style={styles.pointsBanner}
-          onPress={() => router.push('/rewards')}
-        >
-          <View style={styles.pointsContent}>
-            <View style={styles.trophyIcon}>
-              <Ionicons name="trophy" size={24} color="#FFD700" />
-            </View>
-            <View>
-              <Text style={styles.pointsLabel}>Total Points</Text>
-              <Text style={styles.pointsValue}>{points.toLocaleString()}</Text>
-            </View>
-          </View>
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>Gold Tier</Text>
-          </View>
-        </TouchableOpacity>
-
-        <Text style={styles.sectionTitle}>Your Goals</Text>
-
-        {!sortedGoals || sortedGoals.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="rocket-outline" size={32} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.emptyText}>No goals yet. Let's change that!</Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() => router.push('/coach')}
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Points Banner with Gradient */}
+          <TouchableOpacity
+            style={styles.pointsBannerContainer}
+            onPress={() => router.push('/rewards')}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={theme.gradients.sunsetAccent as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.pointsBanner}
             >
-              <Text style={styles.emptyButtonText}>Create Goal with AI</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.goalsList}>
-            {sortedGoals.map((goal) => {
-              const colors = getStatusColor(goal.status || 'on-track');
-              const isCompleted = goal.status === 'completed';
+              <View style={styles.pointsContent}>
+                <View style={styles.trophyIcon}>
+                  <Ionicons name="trophy" size={24} color="#FFD700" />
+                </View>
+                <View>
+                  <Text style={styles.pointsLabel}>Total Points</Text>
+                  <Text style={styles.pointsValue}>{points.toLocaleString()}</Text>
+                </View>
+              </View>
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankText}>Gold Tier</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
 
-              return (
-                <ReanimatedSwipeable
-                  key={goal.id}
-                  friction={2}
-                  enableTrackpadTwoFingerGesture
-                  rightThreshold={40}
-                  renderRightActions={(prog, drag) => (
-                    <RightAction prog={prog} drag={drag} onEdit={() => handleEditGoal(goal)} onDelete={() => handleDeleteGoal(goal)} />
-                  )}
-                  renderLeftActions={(prog, drag) => !isCompleted ? (
-                    <LeftAction prog={prog} drag={drag} onComplete={() => handleQuickComplete(goal)} />
-                  ) : undefined}
+          <Text style={styles.sectionTitle}>Your Goals</Text>
+
+          {!sortedGoals || sortedGoals.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="rocket-outline" size={36} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.emptyText}>No goals yet. Let's change that!</Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => router.push('/coach')}
+              >
+                <LinearGradient
+                  colors={theme.gradients.sage as [string, string]}
+                  style={styles.emptyButtonGradient}
                 >
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.goalCard,
-                      isCompleted && styles.goalCardCompleted,
-                      { transform: [{ scale: pressed ? 0.98 : 1 }] }
-                    ]}
-                    onPress={() => handleGoalPress(goal)}
-                    delayLongPress={200}
-                    onLongPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                      showGoalOptions(goal);
-                    }}
+                  <Ionicons name="sparkles" size={18} color="#fff" />
+                  <Text style={styles.emptyButtonText}>Create Goal with AI</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.goalsList}>
+              {sortedGoals.map((goal) => {
+                const colors = getStatusColor(goal.status || 'on-track');
+                const isCompleted = goal.status === 'completed';
+                const progress = goal.progress || 0;
+
+                return (
+                  <ReanimatedSwipeable
+                    key={goal.id}
+                    friction={2}
+                    enableTrackpadTwoFingerGesture
+                    rightThreshold={40}
+                    renderRightActions={(prog, drag) => (
+                      <RightAction prog={prog} drag={drag} onEdit={() => handleEditGoal(goal)} onDelete={() => handleDeleteGoal(goal)} />
+                    )}
+                    renderLeftActions={(prog, drag) => !isCompleted ? (
+                      <LeftAction prog={prog} drag={drag} onComplete={() => handleQuickComplete(goal)} />
+                    ) : undefined}
                   >
-                    <View style={styles.goalHeader}>
-                      <View style={[styles.goalTitleRow, { justifyContent: 'space-between', width: '100%' }]}>
-                        <View style={{ flexDirection: 'row', gap: 12, flex: 1 }}>
-                          <Text style={styles.goalEmoji}>🎯</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[styles.goalText, isCompleted && styles.goalTextCompleted]} numberOfLines={2}>{goal.text}</Text>
-                            <Text style={styles.deadline}>{formatDate(goal.deadline)}</Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.goalCard,
+                        isCompleted && styles.goalCardCompleted,
+                        { transform: [{ scale: pressed ? 0.98 : 1 }] }
+                      ]}
+                      onPress={() => handleGoalPress(goal)}
+                      delayLongPress={200}
+                      onLongPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                        showGoalOptions(goal);
+                      }}
+                    >
+                      {/* Status ribbon */}
+                      <View style={[styles.statusRibbon, { backgroundColor: colors.border }]} />
+
+                      <View style={styles.goalCardContent}>
+                        <View style={styles.goalHeader}>
+                          <View style={styles.goalTitleRow}>
+                            <View style={styles.goalEmojiContainer}>
+                              <Text style={styles.goalEmoji}>🎯</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.goalText, isCompleted && styles.goalTextCompleted]} numberOfLines={2}>{goal.text}</Text>
+                              <Text style={styles.deadline}>{formatDate(goal.deadline)}</Text>
+                            </View>
+
+                            <TouchableOpacity
+                              style={styles.moreButton}
+                              onPress={() => showGoalOptions(goal)}
+                            >
+                              <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.textTertiary} />
+                            </TouchableOpacity>
+                          </View>
+
+                          <View style={[styles.statusBadge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                            <Ionicons name={colors.icon as any} size={12} color={colors.text} style={{ marginRight: 4 }} />
+                            <Text style={[styles.statusText, { color: colors.text }]}>
+                              {getStatusLabel(goal.status || 'on-track')}
+                            </Text>
                           </View>
                         </View>
 
-                        <TouchableOpacity
-                          style={{ padding: 4 }}
-                          onPress={() => showGoalOptions(goal)}
-                        >
-                          <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.textSecondary} />
-                        </TouchableOpacity>
+                        {/* Enhanced Progress Bar */}
+                        <View style={styles.progressSection}>
+                          <View style={styles.progressLabelRow}>
+                            <Text style={styles.progressLabel}>Progress</Text>
+                            <Text style={[styles.progressValue, isCompleted && { color: theme.colors.success }]}>{progress}%</Text>
+                          </View>
+                          <View style={styles.progressBarContainer}>
+                            <View style={styles.progressBar}>
+                              <LinearGradient
+                                colors={isCompleted ? theme.gradients.success as [string, string] : theme.gradients.sage as [string, string]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={[styles.progressFill, { width: `${progress}%` }]}
+                              />
+                            </View>
+                            {/* Milestone markers */}
+                            <View style={styles.milestones}>
+                              {[25, 50, 75].map((milestone) => (
+                                <View
+                                  key={milestone}
+                                  style={[
+                                    styles.milestone,
+                                    { left: `${milestone}%` },
+                                    progress >= milestone && styles.milestoneReached
+                                  ]}
+                                />
+                              ))}
+                            </View>
+                          </View>
+                        </View>
                       </View>
+                    </Pressable>
+                  </ReanimatedSwipeable>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
 
-                      <View style={[styles.statusBadge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                        <Ionicons name={colors.icon as any} size={12} color={colors.text} style={{ marginRight: 4 }} />
-                        <Text style={[styles.statusText, { color: colors.text }]}>
-                          {getStatusLabel(goal.status || 'on-track')}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Progress Bar */}
-                    <View style={styles.progressSection}>
-                      <View style={styles.progressLabelRow}>
-                        <Text style={styles.progressLabel}>Progress</Text>
-                        <Text style={styles.progressValue}>{goal.progress || 0}%</Text>
-                      </View>
-                      <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: `${goal.progress || 0}%` as any, backgroundColor: isCompleted ? theme.colors.success : theme.colors.primary }]} />
-                      </View>
-                    </View>
-                  </Pressable>
-                </ReanimatedSwipeable>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-
-      <AddHabitSheet
-        visible={showEditSheet}
-        onClose={() => setShowEditSheet(false)}
-        initialType="goal"
-        initialId={selectedGoalId || undefined}
-        initialValues={editInitialValues}
-      />
-    </SafeAreaView>
+        <AddHabitSheet
+          visible={showEditSheet}
+          onClose={() => setShowEditSheet(false)}
+          initialType="goal"
+          initialId={selectedGoalId || undefined}
+          initialValues={editInitialValues}
+        />
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',
@@ -330,17 +375,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    // borderBottomWidth: 1, // Removed for seamless feel
-    // borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  iconButton: {
-    padding: 8,
-    margin: -8,
   },
   title: {
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     fontFamily: theme.typography.h1.fontFamily,
     letterSpacing: -0.5,
@@ -350,19 +388,20 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingVertical: 16,
     gap: 24,
     paddingBottom: 100,
   },
+  pointsBannerContainer: {
+    borderRadius: theme.borderRadius.xxl,
+    overflow: 'hidden',
+    ...theme.shadows.medium,
+  },
   pointsBanner: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
     padding: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   pointsContent: {
     flexDirection: 'row',
@@ -370,60 +409,59 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   trophyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   pointsLabel: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontWeight: '500',
   },
   pointsValue: {
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  rankBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: theme.borderRadius.full,
+  },
+  rankText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  sectionTitle: {
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
-  rankBadge: {
-    backgroundColor: theme.colors.surfaceElevated,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  rankText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.accent,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-
   goalsList: {
     gap: 16,
   },
   goalCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16, // Sharper
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    // No shadow
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
+    ...theme.shadows.small,
   },
   goalCardCompleted: {
-    opacity: 0.6,
-    backgroundColor: theme.colors.background, // Fade into background
-    ...theme.shadows.small,
+    opacity: 0.7,
+  },
+  statusRibbon: {
+    width: 5,
+  },
+  goalCardContent: {
+    flex: 1,
+    padding: 20,
   },
   goalHeader: {
     marginBottom: 16,
@@ -431,32 +469,37 @@ const styles = StyleSheet.create({
   },
   goalTitleRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 12,
   },
+  goalEmojiContainer: {
+    width: 44,
+    height: 44,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   goalEmoji: {
-    fontSize: 24,
-    backgroundColor: theme.colors.surfaceElevated,
-    width: 40,
-    height: 40,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    lineHeight: 40,
-    borderRadius: 12,
-    overflow: 'hidden',
+    fontSize: 22,
   },
   goalText: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     marginBottom: 4,
+    lineHeight: 22,
   },
   goalTextCompleted: {
     textDecorationLine: 'line-through',
     color: theme.colors.textSecondary,
   },
   deadline: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+  },
+  moreButton: {
+    padding: 4,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -464,14 +507,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.sm,
     borderWidth: 1,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
-
   progressSection: {
     gap: 8,
   },
@@ -480,35 +522,63 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   progressLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   progressValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  progressBarContainer: {
+    position: 'relative',
+    height: 12,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
   },
-
+  milestones: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 10,
+  },
+  milestone: {
+    position: 'absolute',
+    top: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    marginLeft: -3,
+  },
+  milestoneReached: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 48,
     gap: 16,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
   },
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.surfaceElevated,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -517,48 +587,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   emptyButton: {
-    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    ...theme.shadows.small,
+  },
+  emptyButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 16,
+    paddingVertical: 14,
   },
   emptyButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
+    color: '#fff',
   },
-
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 24,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  newGoalButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  newGoalButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-
-  // SWIPE ACTIONS STYLES
   rightActions: {
     width: 120,
     flexDirection: 'row',
@@ -573,24 +617,16 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    ...theme.shadows.small,
   },
   editBtn: {
-    backgroundColor: '#6b7280', // Gray
+    backgroundColor: theme.colors.textSecondary,
   },
   deleteBtn: {
-    backgroundColor: '#ef4444', // Red
+    backgroundColor: theme.colors.error,
   },
   completeBtn: {
     backgroundColor: theme.colors.success,
     marginLeft: 12,
-    height: 50,
-    width: 50,
-    borderRadius: 25,
-    alignSelf: 'center'
   },
 });

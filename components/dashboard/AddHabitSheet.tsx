@@ -2,6 +2,7 @@ import { theme } from '@/constants/theme';
 import { usePatchApiGoalsByIdMutation, usePostApiGoalsMutation, usePostApiHabitsMutation } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -94,7 +95,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
 
       setTimeout(() => nameInputRef.current?.focus(), 100);
     } else {
-      // Reset position when hidden (though Modal unmounts, good practice)
+      // Reset position when hidden
       slideAnim.setValue(SCREEN_HEIGHT);
     }
   }, [visible, initialType, initialValues]);
@@ -141,7 +142,6 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
 
     try {
       if (type === 'habit') {
-        // TODO: Add Update Habit logic here if needed later
         await createHabit({
           createHabitRequest: {
             name: name,
@@ -163,16 +163,15 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
           await createGoal({
             createGoalRequest: {
               text: name,
-              deadline: deadline.toISOString().split('T')[0], // YYYY-MM-DD
+              deadline: deadline.toISOString().split('T')[0],
               status: 'on-track',
               progress: 0,
-              // Assuming default progress 0 and status on-track
             }
           }).unwrap();
         }
       }
 
-      handleClose(); // Use animated close
+      handleClose();
     } catch (error) {
       Alert.alert('Error', `Failed to ${initialId ? 'update' : 'create'} ${type}. Please try again.`);
       console.error(`Failed to ${initialId ? 'update' : 'create'} ${type}:`, error);
@@ -211,9 +210,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View
-        style={styles.overlay}
-      >
+      <View style={styles.overlay}>
         <TouchableOpacity
           activeOpacity={1}
           onPress={handleClose}
@@ -222,19 +219,28 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+            {/* Handle */}
+            <View style={styles.handle} />
+
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>{type === 'habit' ? 'New Habit' : 'New Goal'}</Text>
+              <Text style={styles.title}>{type === 'habit' ? 'New Habit' : (initialId ? 'Edit Goal' : 'New Goal')}</Text>
               <View style={styles.headerRight}>
                 {type === 'goal' && (
                   <TouchableOpacity
-                    style={styles.headerCreateButton}
+                    style={styles.headerCreateButtonContainer}
                     onPress={handleAdd}
-                    disabled={!name.trim() || isCreatingGoal}
+                    disabled={!name.trim() || isCreatingGoal || isUpdatingGoal}
+                    activeOpacity={0.9}
                   >
-                    <Text style={styles.headerCreateButtonText}>
-                      {isCreatingGoal ? 'Creating...' : 'Create'}
-                    </Text>
+                    <LinearGradient
+                      colors={theme.gradients.sage as [string, string]}
+                      style={styles.headerCreateButton}
+                    >
+                      <Text style={styles.headerCreateButtonText}>
+                        {isCreatingGoal || isUpdatingGoal ? 'Saving...' : 'Save'}
+                      </Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
@@ -270,7 +276,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                   value={emoji}
                   onChangeText={onEmojiChange}
                   placeholder="✨"
-                  placeholderTextColor={theme.colors.textSecondary}
+                  placeholderTextColor={theme.colors.textTertiary}
                   maxLength={12}
                   selectTextOnFocus
                 />
@@ -282,8 +288,8 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                 style={styles.nameInput}
                 value={name}
                 onChangeText={setName}
-                placeholder="habit"
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholder={type === 'habit' ? 'Enter habit name...' : 'What do you want to achieve?'}
+                placeholderTextColor={theme.colors.textTertiary}
               />
 
               {/* Schedule Summary Pill */}
@@ -297,7 +303,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
               </TouchableOpacity>
             </View>
 
-            {/* Detailed Scheduling View (Always Rendered) */}
+            {/* Detailed Scheduling View */}
             <View style={styles.detailsContainer}>
               {type === 'habit' ? (
                 <>
@@ -308,23 +314,27 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                         style={[styles.freqOption, frequency === 'daily' && styles.freqOptionActive]}
                         onPress={() => setFrequency('daily')}
                       >
-                        <Text style={[styles.freqText, frequency === 'daily' && styles.freqTextActive]}>Daily</Text>
+                        <LinearGradient
+                          colors={frequency === 'daily' ? theme.gradients.sage as [string, string] : [theme.colors.surface, theme.colors.surface]}
+                          style={styles.freqOptionGradient}
+                        >
+                          <Text style={[styles.freqText, frequency === 'daily' && styles.freqTextActive]}>Daily</Text>
+                        </LinearGradient>
                       </TouchableOpacity>
-                      {/* Simplified for demo, can add Weekly here */}
                     </View>
                   </View>
 
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>at</Text>
                     <TouchableOpacity
-                      style={styles.timePickerContainer}
+                      style={styles.timePickerButton}
                       onPress={() => {
                         Keyboard.dismiss();
                         setShowTimePicker(true);
                       }}
                     >
-                      {/* Selected time text or simple visual, picker is now at bottom */}
-                      <Text style={{ color: 'white', fontSize: 16 }}>{formatTime(reminderTime)}</Text>
+                      <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
+                      <Text style={styles.timePickerText}>{formatTime(reminderTime)}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -332,18 +342,19 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                     <Text style={styles.detailLabel}>until</Text>
                     <TouchableOpacity style={styles.endDateButton}>
                       <Text style={styles.endDateText}>End date (optional)</Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
                     </TouchableOpacity>
                   </View>
                 </>
               ) : (
-                <View style={{ flex: 1 }}>
+                <View style={styles.calendarContainer}>
                   <DateTimePicker
                     value={deadline}
                     mode="date"
                     display="inline"
                     onChange={handleDateChange}
-                    textColor="white"
-                    themeVariant="dark"
+                    minimumDate={new Date()}
+                    accentColor={theme.colors.primary}
                     style={{ height: 320, width: '100%' }}
                   />
                 </View>
@@ -351,46 +362,49 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
 
               {type === 'habit' && (
                 <TouchableOpacity
-                  style={styles.confirmButton}
+                  style={styles.confirmButtonContainer}
                   onPress={handleAdd}
                   disabled={!name.trim() || isCreatingHabit}
+                  activeOpacity={0.9}
                 >
-                  <Text style={styles.confirmButtonText}>
-                    {isCreatingHabit ? 'Creating...' : 'Create Habit'}
-                  </Text>
+                  <LinearGradient
+                    colors={name.trim() ? theme.gradients.sage as [string, string] : [theme.colors.border, theme.colors.border]}
+                    style={styles.confirmButton}
+                  >
+                    <Text style={[styles.confirmButtonText, !name.trim() && styles.confirmButtonTextDisabled]}>
+                      {isCreatingHabit ? 'Creating...' : 'Create Habit'}
+                    </Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               )}
             </View>
-
-            {/* Quick Add Button logic: if keyboard is open (isExpanded false), user hits 'return' or we can add a button toolbar above keyboard if needed. 
-               For now, relying on 'return' key or the user manually expanding to click create. 
-               Actually, let's allow 'return' on input to submit.
-           */}
           </Animated.View>
         </TouchableWithoutFeedback>
 
         {showTimePicker && (
           <>
             <TouchableOpacity
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 90 }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.overlay, zIndex: 90 }]}
               activeOpacity={1}
               onPress={() => setShowTimePicker(false)}
             />
             <View style={styles.spinnerContainer}>
+              <View style={styles.spinnerHeader}>
+                <Text style={styles.spinnerTitle}>Select Time</Text>
+                <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                  <Text style={styles.doneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
               <DateTimePicker
                 value={reminderTime}
                 mode="time"
                 display="spinner"
                 onChange={handleTimeChange}
-                textColor="white"
-                themeVariant="dark"
                 style={{ height: 180 }}
               />
             </View>
           </>
         )}
-
-
       </View>
     </Modal>
   );
@@ -400,16 +414,24 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: theme.colors.overlay,
   },
   sheet: {
-    backgroundColor: '#1C1C1E', // Darker surface matching screenshot
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderTopLeftRadius: theme.borderRadius.xxl,
+    borderTopRightRadius: theme.borderRadius.xxl,
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     gap: 20,
-    minHeight: 565, // Ensure height stays consistent so keyboard doesn't cover input and fits calendar
+    minHeight: 565,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
@@ -419,19 +441,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '600',
-    color: '#c9c9c9ff',
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontFamily: theme.typography.h2.fontFamily,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  headerCreateButtonContainer: {
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
   headerCreateButton: {
-    backgroundColor: '#5A584E',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 16,
   },
   headerCreateButtonText: {
     color: '#fff',
@@ -439,65 +464,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   closeButton: {
-    padding: 4,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 12,
+    padding: 8,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
     marginTop: 12,
+    backgroundColor: theme.colors.surface,
+    padding: 16,
+    borderRadius: theme.borderRadius.lg,
   },
   emojiContainer: {
-    width: 24,
-    height: 24,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: theme.borderRadius.md,
   },
   emojiInput: {
     fontSize: 24,
     width: 32,
     height: 32,
     textAlign: 'center',
-    color: '#fff',
+    color: theme.colors.textPrimary,
     padding: 0,
   },
   nameInput: {
     flex: 1,
-    fontSize: 18,
-    color: '#fff',
+    fontSize: 16,
+    color: theme.colors.textPrimary,
     padding: 0,
   },
   schedulePill: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
   },
   scheduleText: {
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-  },
-  controlsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: '500',
   },
   typeToggle: {
     flexDirection: 'row',
-    backgroundColor: '#2C2C2E',
-    borderRadius: 20,
-    padding: 2,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.full,
+    padding: 4,
   },
   typeOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: theme.borderRadius.full,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   typeOptionActive: {
-    backgroundColor: theme.colors.primary, // Periwinkle blue/purple
+    backgroundColor: theme.colors.primary,
   },
   typeText: {
     color: theme.colors.textSecondary,
@@ -505,126 +534,130 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   typeTextActive: {
-    color: '#000',
+    color: '#fff',
     fontWeight: '600',
-  },
-  cantMissToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#2C2C2E',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  cantMissText: {
-    color: theme.colors.textSecondary,
-    fontSize: 14,
   },
   detailsContainer: {
     marginTop: 8,
-    gap: 24,
+    gap: 16,
     flex: 1,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Label on left, control on right? or aligned? 
-    // Screenshot shows: Label (left) ..... Control (Right/Stretched)
+    gap: 16,
   },
   detailLabel: {
     color: theme.colors.textSecondary,
     fontSize: 16,
-    width: 60,
+    width: 50,
+    fontWeight: '500',
   },
   frequencySelector: {
     flex: 1,
   },
   freqOption: {
-    backgroundColor: theme.colors.primary, // Active state from screenshot
-    paddingVertical: 12,
-    borderRadius: 16,
-    alignItems: 'center',
-    opacity: 0.8, // Slightly dimmed to match screenshot dark theme vibe?
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
   },
-  freqOptionActive: {
-    backgroundColor: '#4E4E85', // Darker purple/blue
+  freqOptionActive: {},
+  freqOptionGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: theme.borderRadius.lg,
   },
   freqText: {
-    color: '#fff',
+    color: theme.colors.textSecondary,
     fontSize: 16,
     fontWeight: '500',
   },
   freqTextActive: {
     color: '#fff',
+    fontWeight: '600',
   },
-  timePickerContainer: {
+  timePickerButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.lg,
   },
-  addTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  addTimeText: {
-    color: theme.colors.accent,
+  timePickerText: {
+    color: theme.colors.textPrimary,
     fontSize: 16,
+    fontWeight: '500',
   },
   endDateButton: {
     flex: 1,
-    backgroundColor: '#2C2C2E',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.lg,
   },
   endDateText: {
-    color: theme.colors.textSecondary,
+    color: theme.colors.textTertiary,
     fontSize: 16,
+  },
+  calendarContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    padding: 8,
   },
   spinnerContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1C1C1E',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingVertical: 40,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderTopLeftRadius: theme.borderRadius.xxl,
+    borderTopRightRadius: theme.borderRadius.xxl,
+    paddingVertical: 20,
+    paddingBottom: 40,
     zIndex: 100,
-    borderTopWidth: 1,
-    borderTopColor: '#2C2C2E',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   spinnerHeader: {
-    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
+    borderBottomColor: theme.colors.divider,
+  },
+  spinnerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   doneText: {
     color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
-  confirmButton: {
-    backgroundColor: '#5A584E', // brownish from screenshot? Or maybe theme.primary?
-    // Checking screenshot 2, button is brownish "Create Habit"
-    // Let's use a subtle primary
+  confirmButtonContainer: {
     marginTop: 'auto',
-    padding: 16,
-    borderRadius: 16,
+    borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
+    ...theme.shadows.small,
+  },
+  confirmButton: {
+    padding: 18,
     alignItems: 'center',
   },
   confirmButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  confirmButtonTextDisabled: {
+    color: theme.colors.textTertiary,
   },
 });

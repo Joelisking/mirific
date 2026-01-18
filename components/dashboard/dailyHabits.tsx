@@ -112,13 +112,17 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>Daily Habits</Text>
-        <TouchableOpacity onPress={() => setShowAddHabit(true)}>
-          <Text style={styles.addButton}>+ Add</Text>
+        <TouchableOpacity
+          onPress={() => setShowAddHabit(true)}
+          style={styles.addButtonContainer}
+        >
+          <Ionicons name="add" size={18} color={theme.colors.primary} />
+          <Text style={styles.addButton}>Add</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.habitsList}>
         {habits && habits.length > 0 ? (
-          habits.map((habit) => (
+          habits.map((habit, index) => (
             <ReanimatedSwipeable
               key={habit.id}
               friction={2}
@@ -131,7 +135,8 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
               <Pressable
                 style={({ pressed }) => [
                   styles.habitItem,
-                  pressed && { opacity: 0.7 }
+                  index === habits.length - 1 && styles.habitItemLast,
+                  pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
                 ]}
                 onPress={() => {
                   Haptics.selectionAsync();
@@ -139,12 +144,19 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
                 }}
                 delayLongPress={500}
               >
+                {/* Left colored accent bar */}
+                <View style={[
+                  styles.accentBar,
+                  habit.completedToday && styles.accentBarCompleted
+                ]} />
+
                 <TouchableOpacity
                   onPress={(e) => {
-                    e.stopPropagation(); // Prevent opening edit sheet
+                    e.stopPropagation();
                     handleToggle(habit.id!);
                   }}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.checkboxContainer}
                 >
                   <View
                     style={[
@@ -157,7 +169,9 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
                     )}
                   </View>
                 </TouchableOpacity>
+
                 <Text style={styles.habitEmoji}>{habit.emoji}</Text>
+
                 <View style={styles.habitContent}>
                   <Text
                     style={[
@@ -167,13 +181,20 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
                     {habit.name}
                   </Text>
                   {habit.reminderTime && (
-                    <Text style={styles.habitTime}>
-                      {habit.reminderTime}
-                    </Text>
+                    <View style={styles.habitTimeContainer}>
+                      <Ionicons name="time-outline" size={12} color={theme.colors.textTertiary} />
+                      <Text style={styles.habitTime}>
+                        {habit.reminderTime}
+                      </Text>
+                    </View>
                   )}
                 </View>
+
                 {habit.streak! > 0 && (
-                  <View style={styles.habitStreak}>
+                  <View style={[
+                    styles.habitStreak,
+                    habit.streak! >= 7 && styles.habitStreakGlow
+                  ]}>
                     <Text style={styles.habitStreakNumber}>
                       {habit.streak}
                     </Text>
@@ -185,10 +206,18 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
           ))
         ) : (
           <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="leaf-outline" size={32} color={theme.colors.primary} />
+            </View>
             <Text style={styles.emptyText}>No habits yet</Text>
-            <TouchableOpacity onPress={() => setShowAddHabit(true)}>
+            <Text style={styles.emptySubtext}>Build your daily routine</Text>
+            <TouchableOpacity
+              onPress={() => setShowAddHabit(true)}
+              style={styles.emptyButtonContainer}
+            >
+              <Ionicons name="add-circle" size={20} color={theme.colors.primary} />
               <Text style={styles.emptyButton}>
-                + Add your first habit
+                Add your first habit
               </Text>
             </TouchableOpacity>
           </View>
@@ -201,18 +230,6 @@ function DailyHabits({ setShowAddHabit, onEditHabit }: DailyHabitsProps) {
 export default DailyHabits;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
-    gap: 24,
-  },
   card: {
     gap: 4,
   },
@@ -230,350 +247,163 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.h2.fontFamily,
     letterSpacing: -0.5,
   },
+  addButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.borderRadius.full,
+  },
   addButton: {
     fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  weekDays: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dayCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 12,
-  },
-  dayCardToday: {
-    backgroundColor: theme.colors.primary,
-  },
-  dayName: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  dayNameToday: {
-    color: theme.colors.textPrimary,
-  },
-  dayDate: {
-    fontSize: 18,
+    color: theme.colors.primary,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  dayDateToday: {
-    color: theme.colors.textPrimary,
-  },
-  focusCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: theme.colors.accent,
-  },
-  goalsList: {
-    gap: 8,
-  },
-  goalItem: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.surfaceHighlight,
-  },
-  goalText: {
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-  },
-  goalMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  goalDeadline: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  goalBadge: {
-    backgroundColor: theme.colors.surfaceElevated,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  goalBadgeRisk: {
-    backgroundColor: theme.colors.background,
   },
   habitsList: {
-    gap: 0, // No gap, using dividers
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...theme.shadows.small,
   },
   habitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     padding: 16,
-    backgroundColor: theme.colors.surface,
+    paddingLeft: 0,
+    backgroundColor: theme.colors.surfaceElevated,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
-    borderRadius: 0, // Flat list
+  },
+  habitItemLast: {
+    borderBottomWidth: 0,
+  },
+  accentBar: {
+    width: 4,
+    height: '100%',
+    backgroundColor: theme.colors.border,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderBottomLeftRadius: theme.borderRadius.xl,
+  },
+  accentBarCompleted: {
+    backgroundColor: theme.colors.success,
+  },
+  checkboxContainer: {
+    marginLeft: 12,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6, // Squircle
-    borderWidth: 1.5,
-    borderColor: theme.colors.textSecondary,
+    width: 26,
+    height: 26,
+    borderRadius: theme.borderRadius.full, // Circular checkbox
+    borderWidth: 2,
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
   },
   checkboxChecked: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   habitEmoji: {
-    fontSize: 18,
+    fontSize: 20,
   },
   habitContent: {
     flex: 1,
     gap: 2,
-    marginLeft: -5,
   },
   habitName: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '500',
     color: theme.colors.textPrimary,
   },
   habitNameCompleted: {
-    color: theme.colors.textSecondary,
+    color: theme.colors.textTertiary,
     textDecorationLine: 'line-through',
   },
+  habitTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   habitTime: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
+    fontSize: 12,
+    color: theme.colors.textTertiary,
   },
   habitStreak: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: theme.colors.surfaceHighlight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
+  },
+  habitStreakGlow: {
+    backgroundColor: 'rgba(232, 167, 86, 0.15)',
+    ...theme.shadows.streakGlow,
   },
   habitStreakNumber: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '700',
     color: theme.colors.warning,
   },
   habitStreakEmoji: {
     fontSize: 14,
   },
-  activeGoalItem: {
-    borderWidth: 2,
-    borderColor: theme.colors.surfaceHighlight,
-    borderRadius: 16,
-    padding: 16,
-  },
-  progressContainer: {
-    marginTop: 12,
-    gap: 8,
-  },
-  progressLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  progressValue: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: theme.colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: theme.colors.accent,
-    borderRadius: 3,
-  },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 12,
+    paddingVertical: 32,
+    gap: 8,
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  emptySubtext: {
     fontSize: 14,
     color: theme.colors.textSecondary,
+  },
+  emptyButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.borderRadius.full,
   },
   emptyButton: {
     fontSize: 14,
+    fontWeight: '600',
     color: theme.colors.primary,
   },
   loadingContainer: {
-    paddingVertical: 24,
+    paddingVertical: 32,
     alignItems: 'center',
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
   },
   errorText: {
     fontSize: 14,
-    color: theme.colors.error || '#ef4444',
+    color: theme.colors.error,
     textAlign: 'center',
     paddingVertical: 24,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 32,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
     backgroundColor: theme.colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    gap: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  actionsList: {
-    gap: 8,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: 16,
-    padding: 16,
-  },
-  actionEmoji: {
-    fontSize: 24,
-  },
-  actionLabel: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-  },
-  coachButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  coachButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  habitModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  habitModalContent: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 24,
-    gap: 16,
-  },
-  habitModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  habitModalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  habitForm: {
-    gap: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-  },
-  emojiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  emojiOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiOptionSelected: {
-    backgroundColor: theme.colors.background,
-    borderColor: theme.colors.accent,
-  },
-  emojiText: {
-    fontSize: 24,
-  },
-  addHabitButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-  },
-  addHabitButtonDisabled: {
-    opacity: 0.5,
-  },
-  addHabitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+    borderRadius: theme.borderRadius.xl,
   },
   rightActions: {
     width: 60,
@@ -590,6 +420,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteBtn: {
-    backgroundColor: '#ef4444', // Red
+    backgroundColor: theme.colors.error,
   },
 });

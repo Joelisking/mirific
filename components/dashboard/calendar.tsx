@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dayNameToday: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.textInverse,
   },
   dayDate: {
     fontSize: 18,
@@ -148,6 +148,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   dayDateToday: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.textInverse,
   },
 });

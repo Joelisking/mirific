@@ -35,7 +35,7 @@ const SkeletonItem = ({ style }: { style: any }) => {
   return (
     <Animated.View
       style={[
-        { opacity: animatedValue, backgroundColor: theme.colors.surfaceElevated },
+        { opacity: animatedValue, backgroundColor: theme.colors.surfaceHighlight },
         style,
       ]}
     />
@@ -47,8 +47,6 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
   const { setCurrentGoal } = useApp();
   const { data: goals, isLoading, error } = useGetApiGoalsQuery();
 
-  // ... (rest of the component logic remains same until return)
-
   const getTodayGoals = () => {
     const today = new Date();
     return goals?.filter((goal) => {
@@ -59,14 +57,7 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
       const diffTime = deadline.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // Criteria 1: Due Soon (<= 3 days)
-      // Note: We check diffDays > -100 (or similar) to include overdue, 
-      // but usually 'completed' check handles old stuff. 
-      // Let's assume we want to see overdue items too until completed.
       const isDueSoon = diffDays <= 3;
-
-      // Criteria 2: At Risk (< 7 days AND < 50% progress)
-      // This matches the logic discussed for "At Risk"
       const isAtRisk = diffDays < 7 && (goal.progress || 0) < 50;
 
       return isDueSoon || isAtRisk;
@@ -81,16 +72,16 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
       <View style={styles.focusCard}>
         <View style={styles.cardHeader}>
           <View style={styles.headerContent}>
-            <SkeletonItem style={{ width: 40, height: 40, borderRadius: 12 }} />
+            <SkeletonItem style={{ width: 44, height: 44, borderRadius: theme.borderRadius.md }} />
             <View style={{ gap: 8 }}>
-              <SkeletonItem style={{ width: 120, height: 20, borderRadius: 4 }} />
-              <SkeletonItem style={{ width: 180, height: 14, borderRadius: 4 }} />
+              <SkeletonItem style={{ width: 120, height: 20, borderRadius: theme.borderRadius.sm }} />
+              <SkeletonItem style={{ width: 180, height: 14, borderRadius: theme.borderRadius.sm }} />
             </View>
           </View>
         </View>
         <View style={styles.goalsList}>
-          <SkeletonItem style={{ width: '100%', height: 80, borderRadius: 16 }} />
-          <SkeletonItem style={{ width: '100%', height: 80, borderRadius: 16 }} />
+          <SkeletonItem style={{ width: '100%', height: 80, borderRadius: theme.borderRadius.lg }} />
+          <SkeletonItem style={{ width: '100%', height: 80, borderRadius: theme.borderRadius.lg }} />
         </View>
       </View>
     );
@@ -101,7 +92,6 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
     return null;
   }
 
-  // If no goals meet the criteria, hide the component entirely
   if (!hasGoals) {
     return null;
   }
@@ -122,14 +112,14 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
             <View style={styles.iconBadge}>
               <Ionicons
                 name="flame"
-                size={18}
+                size={20}
                 color={theme.colors.warning}
               />
             </View>
             <View>
-              <Text style={styles.cardTitle}>Daily Focus</Text>
+              <Text style={styles.cardTitle}>Needs Attention</Text>
               <Text style={styles.cardSubtitle}>
-                {`${todayFocus?.length} ${todayFocus?.length === 1 ? 'goal needs' : 'goals need'} attention`}
+                {`${todayFocus?.length} ${todayFocus?.length === 1 ? 'goal needs' : 'goals need'} your focus`}
               </Text>
             </View>
           </View>
@@ -146,59 +136,88 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
             return (
               <TouchableOpacity
                 key={goal.id}
-                style={[
-                  styles.goalItem,
-                  isAtRisk && styles.goalItemAtRisk,
-                ]}
-                onPress={() => handleNavigateToCheckIn(goal.id as string)}>
-                <View style={styles.goalHeader}>
-                  <Text style={styles.goalText} numberOfLines={2}>
-                    {goal.text}
-                  </Text>
-                  {isAtRisk && (
-                    <View style={styles.urgentBadge}>
-                      <Ionicons name="alert-circle" size={14} color={theme.colors.error} />
-                      <Text style={styles.urgentText}>At Risk</Text>
-                    </View>
-                  )}
-                  {!isAtRisk && isOverdue && (
-                    <View style={[styles.urgentBadge, { marginBottom: 0 }]}>
-                      <Ionicons name="time" size={14} color={theme.colors.error} />
-                      <Text style={styles.urgentText}>Overdue</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.goalMeta}>
-                  <View style={styles.deadlineContainer}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={14}
-                      color={theme.colors.textSecondary}
-                    />
-                    <Text style={[styles.goalDeadline, isOverdue && { color: theme.colors.error }]}>
-                      {goal.deadline ? new Date(goal.deadline).toLocaleDateString(
-                        'en-US',
-                        {
-                          month: 'short',
-                          day: 'numeric',
-                        }
-                      ) : 'No deadline'}
+                style={styles.goalItem}
+                onPress={() => handleNavigateToCheckIn(goal.id as string)}
+                activeOpacity={0.8}
+              >
+                {/* Left status ribbon */}
+                <View style={[
+                  styles.statusRibbon,
+                  isOverdue && styles.statusRibbonOverdue,
+                  isAtRisk && !isOverdue && styles.statusRibbonAtRisk,
+                  !isAtRisk && !isOverdue && styles.statusRibbonWarning
+                ]} />
+
+                <View style={styles.goalContent}>
+                  <View style={styles.goalHeader}>
+                    <Text style={styles.goalText} numberOfLines={2}>
+                      {goal.text}
                     </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.goalBadge,
-                      isAtRisk && styles.goalBadgeRisk,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.goalBadgeText,
-                        isAtRisk && styles.goalBadgeTextRisk,
+                    {(isAtRisk || isOverdue) && (
+                      <View style={[
+                        styles.urgentBadge,
+                        isOverdue && styles.urgentBadgeOverdue
                       ]}>
-                      {goal.progress}%
-                    </Text>
+                        <Ionicons
+                          name={isOverdue ? "time" : "alert-circle"}
+                          size={14}
+                          color={isOverdue ? theme.colors.error : theme.colors.warning}
+                        />
+                        <Text style={[
+                          styles.urgentText,
+                          isOverdue && styles.urgentTextOverdue
+                        ]}>
+                          {isOverdue ? 'Overdue' : 'At Risk'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.goalMeta}>
+                    <View style={styles.deadlineContainer}>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={14}
+                        color={isOverdue ? theme.colors.error : theme.colors.textSecondary}
+                      />
+                      <Text style={[styles.goalDeadline, isOverdue && styles.goalDeadlineOverdue]}>
+                        {goal.deadline ? new Date(goal.deadline).toLocaleDateString(
+                          'en-US',
+                          {
+                            month: 'short',
+                            day: 'numeric',
+                          }
+                        ) : 'No deadline'}
+                      </Text>
+                    </View>
+
+                    {/* Progress indicator */}
+                    <View style={styles.progressContainer}>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${goal.progress || 0}%` },
+                            isAtRisk && styles.progressFillAtRisk
+                          ]}
+                        />
+                      </View>
+                      <Text style={[
+                        styles.progressText,
+                        isAtRisk && styles.progressTextAtRisk
+                      ]}>
+                        {goal.progress}%
+                      </Text>
+                    </View>
                   </View>
                 </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={theme.colors.textTertiary}
+                  style={styles.chevron}
+                />
               </TouchableOpacity>
             );
           })}
@@ -211,24 +230,13 @@ function DashboardDailyFocus({ onAddGoal }: { onAddGoal?: () => void }) {
 export default DashboardDailyFocus;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
-    gap: 24,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
+  focusCard: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xxl,
     padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 2,
+    borderColor: theme.colors.warning,
+    ...theme.shadows.medium,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -236,33 +244,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  focusCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: theme.colors.warning,
-  },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   iconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.colors.background,
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: 'rgba(232, 167, 86, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
   cardSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
@@ -270,34 +271,61 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   goalItem: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    ...theme.shadows.small,
   },
-  goalItemAtRisk: {
-    borderColor: theme.colors.error,
-    borderWidth: 2,
+  statusRibbon: {
+    width: 5,
+    alignSelf: 'stretch',
+    backgroundColor: theme.colors.warning,
+  },
+  statusRibbonAtRisk: {
+    backgroundColor: theme.colors.warning,
+  },
+  statusRibbonOverdue: {
+    backgroundColor: theme.colors.error,
+  },
+  statusRibbonWarning: {
+    backgroundColor: theme.colors.warning,
+  },
+  goalContent: {
+    flex: 1,
+    padding: 16,
+    paddingLeft: 14,
   },
   goalHeader: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   goalText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textPrimary,
     lineHeight: 20,
+    marginBottom: 6,
   },
   urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(232, 167, 86, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.sm,
+  },
+  urgentBadgeOverdue: {
+    backgroundColor: 'rgba(217, 115, 115, 0.12)',
   },
   urgentText: {
     fontSize: 12,
     fontWeight: '600',
+    color: theme.colors.warning,
+  },
+  urgentTextOverdue: {
     color: theme.colors.error,
   },
   goalMeta: {
@@ -315,34 +343,39 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontWeight: '500',
   },
-  goalBadge: {
-    backgroundColor: theme.colors.surfaceElevated,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  goalBadgeRisk: {
-    backgroundColor: 'rgba(239, 83, 80, 0.15)',
-  },
-  goalBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.success,
-  },
-  goalBadgeTextRisk: {
+  goalDeadlineOverdue: {
     color: theme.colors.error,
   },
-  emptyState: {
+  progressContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 12,
+    gap: 8,
   },
-  emptyText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+  progressBar: {
+    width: 60,
+    height: 6,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 3,
+    overflow: 'hidden',
   },
-  emptyButton: {
-    fontSize: 14,
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 3,
+  },
+  progressFillAtRisk: {
+    backgroundColor: theme.colors.warning,
+  },
+  progressText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.colors.textSecondary,
+    minWidth: 32,
+  },
+  progressTextAtRisk: {
+    color: theme.colors.warning,
+  },
+  chevron: {
+    marginRight: 12,
   },
 });
