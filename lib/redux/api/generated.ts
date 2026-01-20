@@ -113,6 +113,17 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ["Habits"],
       }),
+      putApiHabitsById: build.mutation<
+        PutApiHabitsByIdApiResponse,
+        PutApiHabitsByIdApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/habits/${queryArg.id}`,
+          method: "PUT",
+          body: queryArg.updateHabitRequest,
+        }),
+        invalidatesTags: ["Habits"],
+      }),
       deleteApiHabitsById: build.mutation<
         DeleteApiHabitsByIdApiResponse,
         DeleteApiHabitsByIdApiArg
@@ -233,6 +244,12 @@ export type PatchApiHabitsByIdApiResponse =
 export type PatchApiHabitsByIdApiArg = {
   id: string;
 };
+export type PutApiHabitsByIdApiResponse =
+  /** status 200 Habit updated successfully */ Habit;
+export type PutApiHabitsByIdApiArg = {
+  id: string;
+  updateHabitRequest: UpdateHabitRequest;
+};
 export type DeleteApiHabitsByIdApiResponse =
   /** status 200 Habit deleted successfully */ {
     message?: string;
@@ -345,6 +362,12 @@ export type CreateHabitRequest = {
   frequency?: "daily" | "weekly" | "monthly";
   reminderTime?: string | null;
 };
+export type UpdateHabitRequest = {
+  name?: string;
+  emoji?: string;
+  frequency?: "daily" | "weekly" | "monthly";
+  reminderTime?: string | null;
+};
 export type UpdateProfileRequest = {
   name?: string;
   goals?: string[];
@@ -367,6 +390,7 @@ export const {
   useLazyGetApiHabitsQuery,
   usePostApiHabitsMutation,
   usePatchApiHabitsByIdMutation,
+  usePutApiHabitsByIdMutation,
   useDeleteApiHabitsByIdMutation,
   usePostApiOauthGoogleMutation,
   usePostApiOauthAppleMutation,

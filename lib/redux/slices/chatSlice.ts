@@ -4,8 +4,28 @@ export interface Message {
   id: string;
   type: 'ai' | 'user';
   text: string;
-  goalSuggestion?: any;
-  habitSuggestion?: any;
+  goalSuggestion?: {
+    text: string;
+    deadline: string;
+    emoji: string;
+    saved?: boolean;
+    savedId?: string;
+  };
+  habitSuggestion?: {
+    name: string;
+    emoji: string;
+    frequency: string;
+    reminderTime: string;
+    saved?: boolean;
+    savedId?: string;
+  };
+  progressUpdateSuggestion?: {
+    goalId: string;
+    goalTitle: string;
+    oldProgress: number;
+    newProgress: number;
+    saved?: boolean;
+  };
   timestamp: number;
 }
 
@@ -55,6 +75,22 @@ const chatSlice = createSlice({
         }
       }
     },
+    markProposalSaved: (state, action: PayloadAction<{ sessionId: string; messageId: string; savedId?: string; type: 'habit' | 'goal' }>) => {
+      const { sessionId, messageId, savedId, type } = action.payload;
+      const session = state.sessions[sessionId];
+      if (session) {
+        const message = session.messages.find(m => m.id === messageId);
+        if (message) {
+          if (type === 'habit' && message.habitSuggestion) {
+            message.habitSuggestion.saved = true;
+            message.habitSuggestion.savedId = savedId;
+          } else if (type === 'goal' && message.goalSuggestion) {
+            message.goalSuggestion.saved = true;
+            message.goalSuggestion.savedId = savedId;
+          }
+        }
+      }
+    },
     setActiveSession: (state, action: PayloadAction<string>) => {
       state.activeSessionId = action.payload;
     },
@@ -73,5 +109,5 @@ const chatSlice = createSlice({
   },
 });
 
-export const { createSession, addMessage, setActiveSession, deleteSession, clearAllHistory } = chatSlice.actions;
+export const { createSession, addMessage, markProposalSaved, setActiveSession, deleteSession, clearAllHistory } = chatSlice.actions;
 export default chatSlice.reducer;

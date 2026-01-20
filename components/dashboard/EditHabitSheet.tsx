@@ -1,8 +1,8 @@
 import { theme } from '@/constants/theme';
 import {
   useDeleteApiHabitsByIdMutation,
-  usePostApiHabitsMutation,
 } from '@/lib/redux';
+import { usePutApiHabitsByIdMutation } from '@/lib/redux/api/generated';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,10 +39,12 @@ interface EditHabitSheetProps {
 
 export default function EditHabitSheet({ visible, onClose, habit }: EditHabitSheetProps) {
   const [deleteHabit, { isLoading: isDeleting }] = useDeleteApiHabitsByIdMutation();
-  const [createHabit, { isLoading: isCreating }] = usePostApiHabitsMutation();
+  const [updateHabit, { isLoading: isUpdating }] = usePutApiHabitsByIdMutation();
 
   // Animation State
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const inputAnim = useRef(new Animated.Value(0)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
 
   // Form State
   const [name, setName] = useState('');
@@ -50,9 +52,72 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
   const [reminderTime, setReminderTime] = useState(new Date());
 
+  // Layout State for Keyboard Tracking
+  const [detailsHeight, setDetailsHeight] = useState(0);
+
   // UI State
   const nameInputRef = useRef<TextInput>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Keyboard Listeners
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        // Calculate how much we need to move up
+        // Content Below Input = detailsHeight + paddingBottom (20/40)
+        // If Keyboard Height > Content Below, we must shift up diff + padding
+
+        const paddingBottom = Platform.OS === 'ios' ? 40 : 20;
+        const gap = 20;
+        const contentBelow = detailsHeight + paddingBottom + gap;
+        const keyboardHeight = e.endCoordinates.height;
+
+        // Target: Input bottom should be ~10px above keyboard
+        // Current Input Bottom is 'contentBelow' pixels from bottom of screen (since sheet is at bottom)
+        // Shift = KeyboardHeight + 10 - contentBelow
+
+        // Only shift if keyboard covers it
+        const shift = Math.max(0, keyboardHeight + 12 - contentBelow);
+
+        Animated.parallel([
+          Animated.timing(inputAnim, {
+            toValue: -shift,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(overlayAnim, {
+            toValue: 1,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    );
+
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (e) => {
+        Animated.parallel([
+          Animated.timing(inputAnim, {
+            toValue: 0,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(overlayAnim, {
+            toValue: 0,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [detailsHeight]);
 
   // Animation Logic
   useEffect(() => {
@@ -62,12 +127,26 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
       setEmoji(habit.emoji || '🛡️');
       setFrequency(habit.frequency || 'daily');
       if (habit.reminderTime) {
-        const time = new Date('2024-01-01 ' + habit.reminderTime);
-        setReminderTime(time);
+        try {
+          const today = new Date();
+          const timeString = `${today.toDateString()} ${habit.reminderTime}`;
+          const time = new Date(timeString);
+          if (!isNaN(time.getTime())) {
+            setReminderTime(time);
+          } else {
+            setReminderTime(new Date());
+          }
+        } catch (e) {
+          console.warn('Error parsing time:', e);
+          setReminderTime(new Date());
+        }
       } else {
         setReminderTime(new Date());
       }
       setShowTimePicker(false);
+      // Reset animations
+      inputAnim.setValue(0);
+      overlayAnim.setValue(0);
 
       // Animate In
       Animated.spring(slideAnim, {
@@ -78,7 +157,6 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
         stiffness: 100,
       }).start();
     } else {
-      // Reset position when hidden
       slideAnim.setValue(SCREEN_HEIGHT);
     }
   }, [visible, habit]);
@@ -108,10 +186,9 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
     if (!name.trim() || !habit) return;
 
     try {
-      // Since API doesn't support PATCH with body, we delete and recreate
-      await deleteHabit({ id: habit.id }).unwrap();
-      await createHabit({
-        createHabitRequest: {
+      await updateHabit({
+        id: habit.id,
+        updateHabitRequest: {
           name: name,
           emoji: emoji,
           frequency: frequency,
@@ -168,7 +245,7 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
     }
   };
 
-  const isSaving = isDeleting || isCreating;
+  const isSaving = isDeleting || isUpdating;
 
   if (!habit) return null;
 
@@ -186,13 +263,25 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
           style={StyleSheet.absoluteFill}
         />
 
+
+
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
             {/* Handle */}
-            <View style={styles.handle} />
+            <Animated.View
+              style={[
+                styles.handle,
+                { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+              ]}
+            />
 
             {/* Header */}
-            <View style={styles.header}>
+            <Animated.View
+              style={[
+                styles.header,
+                { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+              ]}
+            >
               <Text style={styles.title}>Edit Habit</Text>
               <View style={styles.headerRight}>
                 <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
@@ -202,18 +291,28 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
                   <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
 
             {/* Streak Badge */}
             {habit.streak && habit.streak > 0 && (
-              <View style={styles.streakBadge}>
+              <Animated.View
+                style={[
+                  styles.streakBadge,
+                  { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+                ]}
+              >
                 <Text style={styles.streakEmoji}>🔥</Text>
                 <Text style={styles.streakText}>{habit.streak} day streak</Text>
-              </View>
+              </Animated.View>
             )}
 
-            {/* Main Input Row */}
-            <View style={styles.inputRow}>
+            {/* Main Input Row - Animated (Stays Opaque) */}
+            <Animated.View
+              style={[
+                styles.inputRow,
+                { transform: [{ translateY: inputAnim }] }
+              ]}
+            >
               {/* Emoji Input */}
               <View style={styles.emojiContainer}>
                 <TextInput
@@ -236,10 +335,16 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
                 placeholder="Enter habit name..."
                 placeholderTextColor={theme.colors.textTertiary}
               />
-            </View>
+            </Animated.View>
 
             {/* Detailed Scheduling View */}
-            <View style={styles.detailsContainer}>
+            <Animated.View
+              style={[
+                styles.detailsContainer,
+                { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+              ]}
+              onLayout={(e) => setDetailsHeight(e.nativeEvent.layout.height)}
+            >
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>when</Text>
                 <View style={styles.frequencySelector}>
@@ -287,7 +392,7 @@ export default function EditHabitSheet({ visible, onClose, habit }: EditHabitShe
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </Animated.View>
         </TouchableWithoutFeedback>
 

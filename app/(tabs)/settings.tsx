@@ -1,17 +1,13 @@
+import MenuOption from '@/components/settings/MenuOption';
+import ProfileCard from '@/components/settings/ProfileCard';
+import ToggleOption from '@/components/settings/ToggleOption';
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import {
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
@@ -40,87 +36,41 @@ export default function SettingsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Profile Card */}
-          <View style={styles.profileCard}>
-            <View style={styles.avatarContainer}>
-              <LinearGradient
-                colors={theme.gradients.sage as [string, string]}
-                style={styles.avatar}
-              >
-                <Text style={styles.avatarText}>
-                  {displayName.charAt(0).toUpperCase()}
-                </Text>
-              </LinearGradient>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{displayName}</Text>
-              {displayEmail && (
-                <Text style={styles.profileEmail}>{displayEmail}</Text>
-              )}
-            </View>
-            <View style={styles.pointsBadge}>
-              <Ionicons name="star" size={14} color={theme.colors.warning} />
-              <Text style={styles.pointsText}>{points} pts</Text>
-            </View>
-          </View>
+          {/* Profile Card */}
+          <ProfileCard
+            displayName={displayName}
+            displayEmail={displayEmail}
+            points={points}
+          />
 
           {/* Preferences Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Preferences</Text>
             <View style={styles.card}>
-              <View style={styles.settingRow}>
-                <View style={styles.settingIconContainer}>
-                  <Ionicons name="notifications-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Push Notifications</Text>
-                  <Text style={styles.settingDescription}>
-                    Get reminders for your goals
-                  </Text>
-                </View>
-                <Switch
-                  value={true}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
-                  thumbColor={theme.colors.primary}
-                />
-              </View>
+              <ToggleOption
+                label="Push Notifications"
+                description="Get reminders for your goals"
+                value={true}
+                icon="notifications-outline"
+              />
 
               <View style={styles.separator} />
 
-              <View style={styles.settingRow}>
-                <View style={styles.settingIconContainer}>
-                  <Ionicons name="chatbubble-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Daily Check-ins</Text>
-                  <Text style={styles.settingDescription}>
-                    Receive daily progress prompts
-                  </Text>
-                </View>
-                <Switch
-                  value={true}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
-                  thumbColor={theme.colors.primary}
-                />
-              </View>
+              <ToggleOption
+                label="Daily Check-ins"
+                description="Receive daily progress prompts"
+                value={true}
+                icon="chatbubble-outline"
+              />
 
               <View style={styles.separator} />
 
-              <View style={styles.settingRow}>
-                <View style={styles.settingIconContainer}>
-                  <Ionicons name="sparkles-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>AI Coach Tips</Text>
-                  <Text style={styles.settingDescription}>
-                    Get personalized suggestions
-                  </Text>
-                </View>
-                <Switch
-                  value={true}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
-                  thumbColor={theme.colors.primary}
-                />
-              </View>
+              <ToggleOption
+                label="AI Coach Tips"
+                description="Get personalized suggestions"
+                value={true}
+                icon="sparkles-outline"
+              />
             </View>
           </View>
 
@@ -144,43 +94,36 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>App</Text>
             <View style={styles.card}>
-              <TouchableOpacity style={styles.menuItem}>
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name="trophy-outline" size={20} color={theme.colors.accent} />
-                </View>
-                <Text style={styles.menuLabel}>Rewards</Text>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
-              </TouchableOpacity>
+              <MenuOption
+                label="Rewards"
+                icon="trophy-outline"
+                iconColor={theme.colors.accent}
+                onPress={() => { }}
+              />
 
               <View style={styles.separator} />
 
-              <TouchableOpacity style={styles.menuItem}>
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name="help-circle-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.menuLabel}>Help & Support</Text>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
-              </TouchableOpacity>
+              <MenuOption
+                label="Help & Support"
+                icon="help-circle-outline"
+                onPress={() => { }}
+              />
 
               <View style={styles.separator} />
 
-              <TouchableOpacity style={styles.menuItem}>
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name="document-text-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.menuLabel}>Privacy Policy</Text>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
-              </TouchableOpacity>
+              <MenuOption
+                label="Privacy Policy"
+                icon="document-text-outline"
+                onPress={() => { }}
+              />
 
               <View style={styles.separator} />
 
-              <View style={styles.menuItem}>
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name="information-circle-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.menuLabel}>Version</Text>
-                <Text style={styles.menuValue}>1.0.0</Text>
-              </View>
+              <MenuOption
+                label="Version"
+                icon="information-circle-outline"
+                value="1.0.0"
+              />
             </View>
           </View>
 
@@ -246,59 +189,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.borderRadius.xl,
-    padding: 20,
-    marginBottom: 24,
-    ...theme.shadows.medium,
-  },
-  avatarContainer: {
-    ...theme.shadows.small,
-    borderRadius: 28,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  pointsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(232, 167, 86, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.full,
-  },
-  pointsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.warning,
-  },
   section: {
     marginBottom: 24,
   },
@@ -316,33 +206,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.xl,
     padding: 16,
     ...theme.shadows.small,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  settingIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  settingInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  settingLabel: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  settingDescription: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
   },
   separator: {
     height: 1,
@@ -365,30 +228,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.primary,
     fontWeight: '500',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  menuValue: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
   },
   logoutButton: {
     flexDirection: 'row',

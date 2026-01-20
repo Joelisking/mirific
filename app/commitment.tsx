@@ -1,17 +1,17 @@
+import { theme } from "@/constants/theme";
+import { useApp } from '@/contexts/AppContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '@/contexts/AppContext';
-import { theme } from "@/constants/theme";
 
 export default function CommitmentScreen() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function CommitmentScreen() {
       status: 'on-track',
       progress: 0,
     });
-    router.replace('/dashboard');
+    router.replace('/');
   };
 
   const formatDate = (dateString: string) => {

@@ -43,6 +43,8 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
 
   // Animation State
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const inputAnim = useRef(new Animated.Value(0)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
 
   // Form State
   const [name, setName] = useState('');
@@ -56,20 +58,71 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
   const [isCantMiss, setIsCantMiss] = useState(false);
   const [type, setType] = useState<'habit' | 'goal'>(initialType);
 
+  // Layout State for Keyboard Tracking
+  const [detailsHeight, setDetailsHeight] = useState(0);
+
   // UI State
   const nameInputRef = useRef<TextInput>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
 
+  // Keyboard Listeners
   useEffect(() => {
-    const showSubscription = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setIsKeyboardVisible(true));
-    const hideSubscription = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setIsKeyboardVisible(false));
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setIsKeyboardVisible(true);
+
+        // Calculate how much we need to move up
+        const paddingBottom = Platform.OS === 'ios' ? 40 : 20;
+        const gap = 20;
+        const contentBelow = detailsHeight + paddingBottom + gap;
+        const keyboardHeight = e.endCoordinates.height;
+
+        // Target: Input bottom should be ~12px above keyboard
+        const shift = Math.max(0, keyboardHeight + 12 - contentBelow);
+
+        Animated.parallel([
+          Animated.timing(inputAnim, {
+            toValue: -shift,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(overlayAnim, {
+            toValue: 1,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          })
+        ]).start();
+      }
+    );
+
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (e) => {
+        setIsKeyboardVisible(false);
+
+        Animated.parallel([
+          Animated.timing(inputAnim, {
+            toValue: 0,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(overlayAnim, {
+            toValue: 0,
+            duration: e.duration || 250,
+            useNativeDriver: true,
+          })
+        ]).start();
+      }
+    );
+
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, []);
+  }, [detailsHeight]);
 
   // Animation Logic
   useEffect(() => {
@@ -83,6 +136,10 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
       setShowTimePicker(false);
       setShowDeadlinePicker(false);
       setType(initialType);
+
+      // Reset animations
+      inputAnim.setValue(0);
+      overlayAnim.setValue(0);
 
       // Animate In
       Animated.spring(slideAnim, {
@@ -220,10 +277,20 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
             {/* Handle */}
-            <View style={styles.handle} />
+            <Animated.View
+              style={[
+                styles.handle,
+                { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+              ]}
+            />
 
             {/* Header */}
-            <View style={styles.header}>
+            <Animated.View
+              style={[
+                styles.header,
+                { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+              ]}
+            >
               <Text style={styles.title}>{type === 'habit' ? 'New Habit' : (initialId ? 'Edit Goal' : 'New Goal')}</Text>
               <View style={styles.headerRight}>
                 {type === 'goal' && (
@@ -247,11 +314,16 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                   <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
 
             {/* Type Toggle */}
             <View style={{ alignItems: 'center' }}>
-              <View style={styles.typeToggle}>
+              <Animated.View
+                style={[
+                  styles.typeToggle,
+                  { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+                ]}
+              >
                 <TouchableOpacity
                   style={[styles.typeOption, type === 'habit' && styles.typeOptionActive]}
                   onPress={() => setType('habit')}
@@ -264,11 +336,16 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                 >
                   <Text style={[styles.typeText, type === 'goal' && styles.typeTextActive]}>Goal</Text>
                 </TouchableOpacity>
-              </View>
+              </Animated.View>
             </View>
 
-            {/* Main Input Row */}
-            <View style={styles.inputRow}>
+            {/* Main Input Row - Animated */}
+            <Animated.View
+              style={[
+                styles.inputRow,
+                { transform: [{ translateY: inputAnim }] }
+              ]}
+            >
               {/* Emoji Input */}
               <View style={styles.emojiContainer}>
                 <TextInput
@@ -301,10 +378,16 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                   }
                 </Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
 
             {/* Detailed Scheduling View */}
-            <View style={styles.detailsContainer}>
+            <Animated.View
+              style={[
+                styles.detailsContainer,
+                { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
+              ]}
+              onLayout={(e) => setDetailsHeight(e.nativeEvent.layout.height)}
+            >
               {type === 'habit' ? (
                 <>
                   <View style={styles.detailRow}>
@@ -377,7 +460,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                   </LinearGradient>
                 </TouchableOpacity>
               )}
-            </View>
+            </Animated.View>
           </Animated.View>
         </TouchableWithoutFeedback>
 

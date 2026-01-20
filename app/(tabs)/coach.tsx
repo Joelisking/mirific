@@ -1,7 +1,12 @@
+import ChatContextMenu from '@/components/coach/ChatContextMenu';
+import ProposalRenderer from '@/components/coach/ProposalRenderer';
+import MarkdownText from '@/components/common/MarkdownText';
 import AddHabitSheet from '@/components/dashboard/AddHabitSheet';
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
-import { addMessage, createSession, deleteSession, Message, setActiveSession } from '@/lib/redux/slices/chatSlice';
+import { parseGoalUpdate } from '@/lib/ai';
+import { useGetApiGoalsQuery, usePatchApiGoalsByIdMutation } from '@/lib/redux/api/generated';
+import { addMessage, createSession, deleteSession, markProposalSaved, setActiveSession, type Message } from '@/lib/redux/slices/chatSlice';
 import { RootState } from '@/lib/redux/store';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  GestureResponderEvent,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -49,14 +55,28 @@ const getApiBaseUrl = () => {
   return 'https://your-production-api.com';
 };
 
+
+
 export default function ChatScreen() {
   const router = useRouter();
   const { userProfile } = useApp();
   const { getToken } = useAuth();
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // API Hooks
+  const { data: activeGoals } = useGetApiGoalsQuery();
+  const [updateGoal] = usePatchApiGoalsByIdMutation();
+
   const dispatch = useDispatch();
   const { sessions, activeSessionId } = useSelector((state: RootState) => state.chat);
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    text: string;
+  }>({ visible: false, x: 0, y: 0, text: '' });
 
   const activeSession = activeSessionId ? sessions[activeSessionId] : null;
   const messages = activeSession ? activeSession.messages : [];
@@ -68,6 +88,7 @@ export default function ChatScreen() {
   const [showSheet, setShowSheet] = useState(false);
   const [sheetType, setSheetType] = useState<'habit' | 'goal'>('habit');
   const [sheetInitialValues, setSheetInitialValues] = useState<any>(undefined);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeSessionId) {
@@ -95,7 +116,7 @@ export default function ChatScreen() {
     const initialMsg: Message = {
       id: 'init-' + newId,
       type: 'ai',
-      text: `Hey ${userProfile?.name?.split(' ')[0] || 'there'}! 👋 Ready to tackle something new?\n\nWhat do you want to get done this week?`,
+      text: `Hey ${userProfile?.name?.split(' ')[0] || 'there'} ! 👋 Ready to tackle something new?\n\nWhat do you want to get done this week ? `,
       timestamp: Date.now()
     };
     dispatch(createSession({ id: newId, initialMessage: initialMsg }));
@@ -124,11 +145,11 @@ export default function ChatScreen() {
         content: `Current Date: ${new Date().toISOString().split('T')[0]}. Ensure all date suggestions are in the future relative to this date.`
       };
 
-      const response = await fetch(`${getApiBaseUrl()}/api/ai/chat`, {
+      const response = await fetch(`${getApiBaseUrl()} /api/ai / chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token} `,
         },
         body: JSON.stringify({
           message: text,
@@ -162,7 +183,21 @@ export default function ChatScreen() {
     }
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleMessageLongPress = (event: GestureResponderEvent, text: string) => {
+    const { pageX, pageY } = event.nativeEvent;
+    // Adjust Y to not be under the finger, maybe slightly below or above
+    // We'll limit width to stay on screen later in styling
+    setContextMenu({
+      visible: true,
+      x: Math.min(pageX, 200), // Keep it somewhat left-aligned if on right edge
+      y: pageY,
+      text
+    });
+  };
+
+
+
+  const handleSendMessage = async (text: string) => {
     if (!text.trim() || !activeSessionId) return;
 
     const userMessage: Message = {
@@ -175,8 +210,62 @@ export default function ChatScreen() {
     dispatch(addMessage({ sessionId: activeSessionId, message: userMessage }));
     setInputText('');
 
+    // Check for goal progress update
+    if (activeGoals && activeGoals.length > 0) {
+      const validGoals = activeGoals.map(g => ({
+        id: g.id!,
+        text: g.text!,
+        progress: g.progress || 0
+      }));
+
+      try {
+        const updateResult = await parseGoalUpdate(text, validGoals);
+        if (updateResult) {
+          const goal = activeGoals.find(g => g.id === updateResult.goalId);
+          if (goal) {
+            const aiMessage: Message = {
+              id: Date.now().toString(),
+              type: 'ai',
+              text: `I noticed you made progress on "${goal.text}".Should I update it for you ? `,
+              timestamp: Date.now(),
+              progressUpdateSuggestion: {
+                goalId: goal.id!,
+                goalTitle: goal.text!,
+                oldProgress: goal.progress || 0,
+                newProgress: updateResult.newProgress
+              }
+            };
+            dispatch(addMessage({ sessionId: activeSessionId, message: aiMessage }));
+            return; // Skip normal chat response if we handled it as a progress update
+          }
+        }
+      } catch (e) {
+        console.log('Error checking progress', e);
+      }
+    }
+
     const newHistory = [...messages, userMessage];
     sendMessageToBackend(text, newHistory);
+  };
+
+  const handleConfirmProgressUpdate = async (suggestion: NonNullable<Message['progressUpdateSuggestion']>, messageId: string) => {
+    try {
+      await updateGoal({
+        id: suggestion.goalId,
+        updateGoalRequest: { progress: suggestion.newProgress }
+      }).unwrap();
+
+      if (activeSessionId) {
+        dispatch(markProposalSaved({
+          sessionId: activeSessionId,
+          messageId,
+          type: 'goal', // Reusing 'goal' type for simplicity in reducer or define new one if strictly typed
+          savedId: suggestion.goalId
+        }));
+      }
+    } catch (e) {
+      Alert.alert("Update Failed", "Could not update goal progress.");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -197,17 +286,18 @@ export default function ChatScreen() {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const handleCreateGoal = (suggestion: GoalSuggestion) => {
+  const handleCreateGoal = (suggestion: GoalSuggestion, messageId: string) => {
     setSheetType('goal');
     setSheetInitialValues({
       name: suggestion.text,
       emoji: suggestion.emoji,
       deadline: new Date(suggestion.deadline),
     });
+    setActiveMessageId(messageId);
     setShowSheet(true);
   };
 
-  const handleCreateHabit = (suggestion: HabitSuggestion) => {
+  const handleCreateHabit = (suggestion: HabitSuggestion, messageId: string) => {
     setSheetType('habit');
     let reminderTime = new Date();
     setSheetInitialValues({
@@ -216,7 +306,20 @@ export default function ChatScreen() {
       frequency: suggestion.frequency.toLowerCase() as 'daily' | 'weekly',
       reminderTime: reminderTime,
     });
+    setActiveMessageId(messageId);
     setShowSheet(true);
+  };
+
+  const handleSheetSuccess = () => {
+    if (activeSessionId && activeMessageId) {
+      dispatch(markProposalSaved({
+        sessionId: activeSessionId,
+        messageId: activeMessageId,
+        type: sheetType,
+        savedId: 'temp-id'
+      }));
+    }
+    setActiveMessageId(null);
   };
 
   const handleDeleteSession = (id: string, e: any) => {
@@ -272,101 +375,45 @@ export default function ChatScreen() {
           >
             {messages.map((message) => (
               <View key={message.id}>
-                <View
-                  style={[
-                    styles.messageWrapper,
-                    message.type === 'user'
-                      ? styles.messageWrapperUser
-                      : styles.messageWrapperAI,
-                  ]}
-                >
-                  {message.type === 'user' ? (
+                {message.type === 'user' ? (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onLongPress={(e) => handleMessageLongPress(e, message.text)}
+                    style={[
+                      styles.messageWrapper,
+                      styles.messageWrapperUser,
+                    ]}
+                  >
                     <LinearGradient
                       colors={theme.gradients.sage as [string, string]}
                       style={[styles.messageBubble, styles.messageBubbleUser]}
                     >
-                      <Text style={[styles.messageText, styles.messageTextUser]}>
+                      <MarkdownText style={[styles.messageText, styles.messageTextUser]}>
                         {message.text}
-                      </Text>
+                      </MarkdownText>
                     </LinearGradient>
-                  ) : (
+                  </TouchableOpacity>
+                ) : (
+                  <View
+                    style={[
+                      styles.messageWrapper,
+                      styles.messageWrapperAI,
+                    ]}
+                  >
                     <View style={[styles.messageBubble, styles.messageBubbleAI]}>
-                      <Text style={styles.messageText}>
+                      <MarkdownText style={styles.messageText}>
                         {message.text}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Goal Proposal Card */}
-                {message.goalSuggestion && (
-                  <View style={styles.proposalContainer}>
-                    <View style={styles.proposalCard}>
-                      <View style={styles.proposalHeader}>
-                        <Text style={styles.proposalEmoji}>{message.goalSuggestion.emoji}</Text>
-                        <View style={styles.proposalBadge}>
-                          <Text style={styles.proposalBadgeText}>Goal Proposal</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.proposalText}>{message.goalSuggestion.text}</Text>
-                      <View style={styles.proposalMeta}>
-                        <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
-                        <Text style={styles.proposalDate}>Target: {formatDate(message.goalSuggestion.deadline)}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.proposalButton}
-                        onPress={() => handleCreateGoal(message.goalSuggestion!)}
-                        activeOpacity={0.9}
-                      >
-                        <LinearGradient
-                          colors={theme.gradients.sage as [string, string]}
-                          style={styles.proposalButtonGradient}
-                        >
-                          <Text style={styles.proposalButtonText}>Review & Save</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#fff" />
-                        </LinearGradient>
-                      </TouchableOpacity>
+                      </MarkdownText>
                     </View>
                   </View>
                 )}
 
-                {/* Habit Proposal Card */}
-                {message.habitSuggestion && (
-                  <View style={styles.proposalContainer}>
-                    <View style={[styles.proposalCard, styles.habitProposalCard]}>
-                      <View style={styles.proposalHeader}>
-                        <Text style={styles.proposalEmoji}>{message.habitSuggestion.emoji}</Text>
-                        <View style={[styles.proposalBadge, styles.habitProposalBadge]}>
-                          <Text style={[styles.proposalBadgeText, { color: theme.colors.accent }]}>Habit Proposal</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.proposalText}>{message.habitSuggestion.name}</Text>
-                      <View style={styles.habitProposalMeta}>
-                        <View style={styles.metaChip}>
-                          <Ionicons name="repeat-outline" size={14} color={theme.colors.textSecondary} />
-                          <Text style={styles.metaChipText}>{message.habitSuggestion.frequency}</Text>
-                        </View>
-                        <View style={styles.metaChip}>
-                          <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
-                          <Text style={styles.metaChipText}>{message.habitSuggestion.reminderTime}</Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.proposalButton}
-                        onPress={() => handleCreateHabit(message.habitSuggestion!)}
-                        activeOpacity={0.9}
-                      >
-                        <LinearGradient
-                          colors={theme.gradients.sunsetAccent as [string, string]}
-                          style={styles.proposalButtonGradient}
-                        >
-                          <Text style={styles.proposalButtonText}>Review & Save</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#fff" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
+                <ProposalRenderer
+                  message={message}
+                  onCreateGoal={handleCreateGoal}
+                  onCreateHabit={handleCreateHabit}
+                  onConfirmProgressUpdate={handleConfirmProgressUpdate}
+                />
               </View>
             ))}
 
@@ -407,7 +454,8 @@ export default function ChatScreen() {
                 onChangeText={setInputText}
                 placeholder="What's on your mind?"
                 placeholderTextColor={theme.colors.textTertiary}
-                onSubmitEditing={() => handleSendMessage(inputText)}
+                multiline={true}
+                textAlignVertical="center" // Android
               />
               <TouchableOpacity
                 style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
@@ -428,6 +476,7 @@ export default function ChatScreen() {
         <AddHabitSheet
           visible={showSheet}
           onClose={() => setShowSheet(false)}
+          onAddSafe={handleSheetSuccess}
           initialType={sheetType}
           initialValues={sheetInitialValues}
         />
@@ -485,7 +534,15 @@ export default function ChatScreen() {
           </LinearGradient>
         </Modal>
       </SafeAreaView>
-    </LinearGradient>
+      {/* Custom Context Menu Modal */}
+      <ChatContextMenu
+        visible={contextMenu.visible}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        text={contextMenu.text}
+        onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
+      />
+    </LinearGradient >
   );
 }
 
@@ -580,110 +637,6 @@ const styles = StyleSheet.create({
   },
   messageTextUser: {
     color: '#fff',
-  },
-
-  // Proposal Cards
-  proposalContainer: {
-    alignItems: 'flex-start',
-    marginTop: 12,
-    marginBottom: 8,
-    width: '100%',
-  },
-  proposalCard: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.borderRadius.xl,
-    padding: 20,
-    width: '90%',
-    ...theme.shadows.medium,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.primary,
-  },
-  habitProposalCard: {
-    borderLeftColor: theme.colors.accent,
-  },
-  proposalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  proposalEmoji: {
-    fontSize: 28,
-  },
-  proposalBadge: {
-    backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
-  },
-  habitProposalBadge: {
-    backgroundColor: 'rgba(196, 149, 106, 0.15)',
-  },
-  proposalBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  proposalText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  proposalMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-    backgroundColor: theme.colors.surface,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.sm,
-  },
-  proposalDate: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  habitProposalMeta: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-    flexWrap: 'wrap',
-  },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.sm,
-  },
-  metaChipText: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  proposalButton: {
-    borderRadius: theme.borderRadius.lg,
-    overflow: 'hidden',
-  },
-  proposalButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-  },
-  proposalButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
   },
 
   suggestionsContainer: {
