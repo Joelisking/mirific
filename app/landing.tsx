@@ -16,7 +16,7 @@ export default function LandingScreen() {
               <Ionicons name="sparkles" size={48} color="#fff" />
             </View>
           </View>
-          
+
           <Text style={styles.title}>
             Welcome to <Text style={styles.brandName}>Mirific</Text>
           </Text>
@@ -44,7 +44,7 @@ export default function LandingScreen() {
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => router.push('/onboarding')}
           >
@@ -52,7 +52,7 @@ export default function LandingScreen() {
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/login')}
           >
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: {
-    color: theme.colors.textPrimary,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

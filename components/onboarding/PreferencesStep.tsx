@@ -54,12 +54,12 @@ export default function PreferencesStep({
 
   return (
     <View style={styles.stepContainer}>
-      <LinearGradient
+      {/* <LinearGradient
         colors={theme.gradients.sage as [string, string]}
         style={styles.iconContainer}
       >
         <Ionicons name="settings-outline" size={32} color="#fff" />
-      </LinearGradient>
+      </LinearGradient> */}
       <Text style={styles.stepTitle}>How should we coach you?</Text>
       <Text style={styles.stepSubtitle}>
         Customize how your AI coach interacts with you

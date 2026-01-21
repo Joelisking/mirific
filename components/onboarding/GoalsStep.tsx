@@ -56,14 +56,14 @@ export default function GoalsStep({
                 ]}>
                 {goal.label}
               </Text>
-              {isSelected && (
+              {/* {isSelected && (
                 <LinearGradient
                   colors={theme.gradients.sage as [string, string]}
                   style={styles.checkMark}
                 >
                   <Ionicons name="checkmark" size={14} color="#fff" />
                 </LinearGradient>
-              )}
+              )} */}
             </TouchableOpacity>
           );
         })}

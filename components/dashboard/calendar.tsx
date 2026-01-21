@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
   },
   dayDate: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },

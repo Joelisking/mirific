@@ -6,7 +6,7 @@ import ProgressIndicator from '@/components/onboarding/ProgressIndicator';
 import StrugglesStep from '@/components/onboarding/StrugglesStep';
 import { theme } from '@/constants/theme';
 import { useApp } from '@/contexts/AppContext';
-import { usePostApiClerkSyncMutation } from '@/lib/redux';
+import { useLazyGetApiClerkProfileQuery, usePostApiClerkSyncMutation } from '@/lib/redux';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +31,7 @@ export default function OnboardingScreen() {
   const { user } = useUser();
 
   const [syncUser, { isLoading: isSyncing }] = usePostApiClerkSyncMutation();
+  const [checkProfile] = useLazyGetApiClerkProfileQuery();
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
@@ -67,9 +68,30 @@ export default function OnboardingScreen() {
     );
   };
 
-  const handleAuthSuccess = () => {
-    // User authenticated with Clerk, move to next step
-    setStep(1); // Skip to name step
+  const handleAuthSuccess = async () => {
+    // Check if user already has a backend profile
+    try {
+      const profile = await checkProfile().unwrap();
+      if (profile.user) {
+        // User already exists - sync to AppContext and go home
+        setUserProfile({
+          name: profile.user.name || '',
+          goals: profile.user.goals || [],
+          struggles: profile.user.struggles || [],
+          communicationMode: profile.user.communicationMode || 'text',
+          reminderTone: profile.user.reminderTone || 'gentle',
+        });
+        router.replace('/home');
+        return;
+      }
+    } catch (error: any) {
+      // 404 means user doesn't exist yet - continue with onboarding
+      if (error?.status !== 404) {
+        console.error('Profile check error:', error);
+      }
+    }
+    // New user - proceed to next step
+    setStep(1);
   };
 
   const handleComplete = async () => {

@@ -133,7 +133,7 @@ export default function SettingsScreen() {
               style={styles.logoutButton}
               onPress={async () => {
                 await signOut();
-                router.replace('/onboarding');
+                router.replace('/landing');
               }}
               activeOpacity={0.8}
             >

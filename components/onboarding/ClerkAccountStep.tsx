@@ -39,6 +39,12 @@ export default function ClerkAccountStep({
       }
     } catch (err: any) {
       console.error('Google OAuth error:', err);
+      // If user is already signed in, just proceed
+      if (err.errors?.[0]?.code === 'session_exists' ||
+        err.message?.includes('already signed in')) {
+        onAuthSuccess();
+        return;
+      }
       Alert.alert('Error', err.message || 'Failed to sign in with Google');
     } finally {
       setGoogleLoading(false);
@@ -56,6 +62,12 @@ export default function ClerkAccountStep({
       }
     } catch (err: any) {
       console.error('Apple OAuth error:', err);
+      // If user is already signed in, just proceed
+      if (err.errors?.[0]?.code === 'session_exists' ||
+        err.message?.includes('already signed in')) {
+        onAuthSuccess();
+        return;
+      }
       Alert.alert('Error', err.message || 'Failed to sign in with Apple');
     } finally {
       setAppleLoading(false);

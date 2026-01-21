@@ -142,14 +142,20 @@ export default function ChatScreen() {
 
       const systemContext = {
         role: 'system',
-        content: `Current Date: ${new Date().toISOString().split('T')[0]}. Ensure all date suggestions are in the future relative to this date.`
+        content: `Current Date: ${new Date().toISOString().split('T')[0]}. 
+        User Context:
+        Name: ${userProfile?.name || 'User'}
+        Focus Areas/Goals: ${userProfile?.goals ? userProfile.goals.join(', ') : 'None specified'}
+        Struggles/Challenges: ${userProfile?.struggles ? userProfile.struggles.join(', ') : 'None specified'}
+        
+        Ensure all date suggestions are in the future relative to this date.`
       };
 
-      const response = await fetch(`${getApiBaseUrl()} /api/ai / chat`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token} `,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           message: text,

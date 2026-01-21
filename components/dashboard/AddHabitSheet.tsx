@@ -365,7 +365,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                 style={styles.nameInput}
                 value={name}
                 onChangeText={setName}
-                placeholder={type === 'habit' ? 'Enter habit name...' : 'What do you want to achieve?'}
+                placeholder={type === 'habit' ? 'Enter habit name...' : 'What\'s your goal?'}
                 placeholderTextColor={theme.colors.textTertiary}
               />
 
@@ -384,6 +384,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
             <Animated.View
               style={[
                 styles.detailsContainer,
+                type === 'goal' && styles.detailsContainerGoal,
                 { opacity: overlayAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) }
               ]}
               onLayout={(e) => setDetailsHeight(e.nativeEvent.layout.height)}
@@ -430,17 +431,18 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                   </View>
                 </>
               ) : (
-                <View style={styles.calendarContainer}>
-                  <DateTimePicker
-                    value={deadline}
-                    mode="date"
-                    display="inline"
-                    onChange={handleDateChange}
-                    minimumDate={new Date()}
-                    accentColor={theme.colors.primary}
-                    style={{ height: 320, width: '100%' }}
-                  />
-                </View>
+                // <View style={styles.calendarContainer}>
+                <DateTimePicker
+                  value={deadline}
+                  mode="date"
+                  display="inline"
+                  onChange={handleDateChange}
+                  minimumDate={new Date()}
+                  accentColor={theme.colors.primary}
+                  style={{ height: 320, width: '100%', transform: [{ scale: 0.95 }] }}
+                  themeVariant="light"
+                />
+                // </View>
               )}
 
               {type === 'habit' && (
@@ -484,6 +486,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
                 display="spinner"
                 onChange={handleTimeChange}
                 style={{ height: 180 }}
+                themeVariant="light"
               />
             </View>
           </>
@@ -520,7 +523,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 0,
   },
   title: {
     fontSize: 22,
@@ -555,24 +558,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
-    marginTop: 12,
+    marginBottom: 0,
+    marginTop: 0,
     backgroundColor: theme.colors.surface,
-    padding: 16,
+    padding: 8,
     borderRadius: theme.borderRadius.lg,
   },
   emojiContainer: {
-    width: 44,
-    height: 44,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.sm,
   },
   emojiInput: {
     fontSize: 24,
-    width: 32,
-    height: 32,
+    width: 24,
+    height: 24,
     textAlign: 'center',
     color: theme.colors.textPrimary,
     padding: 0,
@@ -621,9 +624,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   detailsContainer: {
-    marginTop: 8,
+    marginTop: 24,
     gap: 16,
     flex: 1,
+  },
+  detailsContainerGoal: {
+    marginTop: -30,
   },
   detailRow: {
     flexDirection: 'row',
@@ -692,7 +698,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
-    padding: 8,
+    padding: 2,
+    marginTop: -20
   },
   spinnerContainer: {
     position: 'absolute',
