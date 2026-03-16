@@ -24,7 +24,7 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 interface AddHabitSheetProps {
   visible: boolean;
   onClose: () => void;
-  onAddSafe?: () => void;
+  onAddSafe?: (savedId?: string) => void;
   initialType?: 'habit' | 'goal';
   initialId?: string;
   initialValues?: {
@@ -36,7 +36,7 @@ interface AddHabitSheetProps {
   };
 }
 
-export default function AddHabitSheet({ visible, onClose, initialType = 'habit', initialId, initialValues }: AddHabitSheetProps) {
+export default function AddHabitSheet({ visible, onClose, onAddSafe, initialType = 'habit', initialId, initialValues }: AddHabitSheetProps) {
   const [createHabit, { isLoading: isCreatingHabit }] = usePostApiHabitsMutation();
   const [createGoal, { isLoading: isCreatingGoal }] = usePostApiGoalsMutation();
   const [updateGoal, { isLoading: isUpdatingGoal }] = usePatchApiGoalsByIdMutation();
@@ -198,8 +198,10 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
     if (!name.trim()) return;
 
     try {
+      let savedId: string | undefined;
+
       if (type === 'habit') {
-        await createHabit({
+        const result = await createHabit({
           createHabitRequest: {
             name: name,
             emoji: emoji,
@@ -207,6 +209,7 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
             reminderTime: formatTime(reminderTime),
           },
         }).unwrap();
+        savedId = result.id;
       } else {
         if (initialId) {
           await updateGoal({
@@ -216,8 +219,9 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
               deadline: deadline.toISOString().split('T')[0],
             }
           }).unwrap();
+          savedId = initialId;
         } else {
-          await createGoal({
+          const result = await createGoal({
             createGoalRequest: {
               text: name,
               deadline: deadline.toISOString().split('T')[0],
@@ -225,9 +229,11 @@ export default function AddHabitSheet({ visible, onClose, initialType = 'habit',
               progress: 0,
             }
           }).unwrap();
+          savedId = result.id;
         }
       }
 
+      onAddSafe?.(savedId);
       handleClose();
     } catch (error) {
       Alert.alert('Error', `Failed to ${initialId ? 'update' : 'create'} ${type}. Please try again.`);

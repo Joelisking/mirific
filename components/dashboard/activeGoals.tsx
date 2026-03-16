@@ -1,4 +1,5 @@
 import { theme } from '@/constants/theme';
+import { useApp } from '@/contexts/AppContext';
 import { useGetApiGoalsQuery } from '@/lib/redux';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +21,7 @@ interface ActiveGoalsProps {
 const ActiveGoals = ({ setShowQuickActions, onAddGoal }: ActiveGoalsProps) => {
   const router = useRouter();
   const { data: goals, isLoading } = useGetApiGoalsQuery();
-  const { setCurrentGoal } = require('@/contexts/AppContext').useApp();
+  const { setCurrentGoal } = useApp();
 
   const handleNavigateToCheckIn = (goalId: string) => {
     const goal = goals?.find((g) => g.id === goalId);

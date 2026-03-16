@@ -5,6 +5,7 @@ import AddHabitSheet from '@/components/dashboard/AddHabitSheet';
 import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
 import { parseGoalUpdate } from '@/lib/ai';
+import { getBaseUrl } from '@/lib/redux/api';
 import { useGetApiGoalsQuery, usePatchApiGoalsByIdMutation } from '@/lib/redux/api/generated';
 import { addMessage, createSession, deleteSession, markProposalSaved, setActiveSession, type Message } from '@/lib/redux/slices/chatSlice';
 import { RootState } from '@/lib/redux/store';
@@ -44,16 +45,6 @@ interface HabitSuggestion {
   reminderTime: string;
 }
 
-const getApiBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  if (__DEV__) {
-    if (Platform.OS === 'android') return 'http://10.0.2.2:3001';
-    return 'http://192.168.86.29:3001';
-  }
-  return 'https://your-production-api.com';
-};
 
 
 
@@ -151,7 +142,7 @@ export default function ChatScreen() {
         Ensure all date suggestions are in the future relative to this date.`
       };
 
-      const response = await fetch(`${getApiBaseUrl()}/api/ai/chat`, {
+      const response = await fetch(`${getBaseUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +216,8 @@ export default function ChatScreen() {
       }));
 
       try {
-        const updateResult = await parseGoalUpdate(text, validGoals);
+        const token = await getToken();
+        const updateResult = await parseGoalUpdate(text, validGoals, token ?? '');
         if (updateResult) {
           const goal = activeGoals.find(g => g.id === updateResult.goalId);
           if (goal) {
@@ -316,13 +308,13 @@ export default function ChatScreen() {
     setShowSheet(true);
   };
 
-  const handleSheetSuccess = () => {
+  const handleSheetSuccess = (savedId?: string) => {
     if (activeSessionId && activeMessageId) {
       dispatch(markProposalSaved({
         sessionId: activeSessionId,
         messageId: activeMessageId,
         type: sheetType,
-        savedId: 'temp-id'
+        savedId: savedId ?? '',
       }));
     }
     setActiveMessageId(null);

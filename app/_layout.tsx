@@ -10,6 +10,7 @@ import { AppProvider } from '@/contexts/AppContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { ReduxProvider, setClerkTokenGetter } from '@/lib/redux';
+import { useEffect } from 'react';
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -17,17 +18,16 @@ function AppContent() {
   const colorScheme = useColorScheme();
   const { getToken } = useAuth();
 
-  // Set up Clerk token getter for API calls
-  // We do this synchronously in render to ensure it's available
-  // before any child components mount and fire their API queries
-  setClerkTokenGetter(async () => {
-    try {
-      return await getToken();
-    } catch (error) {
-      console.error('Failed to get Clerk token:', error);
-      return null;
-    }
-  });
+  useEffect(() => {
+    setClerkTokenGetter(async () => {
+      try {
+        return await getToken();
+      } catch (error) {
+        console.error('Failed to get Clerk token:', error);
+        return null;
+      }
+    });
+  }, [getToken]);
 
   return (
     <ReduxProvider>

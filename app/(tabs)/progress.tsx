@@ -22,7 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TimelineScreen() {
   const router = useRouter();
-  const { points, setCurrentGoal, setPoints } = useApp();
+  const { points, setCurrentGoal } = useApp();
   const { data: goals, isLoading } = useGetApiGoalsQuery();
   const [deleteGoal] = useDeleteApiGoalsByIdMutation();
   const [updateGoal] = usePatchApiGoalsByIdMutation();
@@ -83,7 +83,6 @@ export default function TimelineScreen() {
         }
       }).unwrap();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setPoints(points + 100);
     } catch (e) {
       console.error(e);
     }

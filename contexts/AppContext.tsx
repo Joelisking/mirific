@@ -32,63 +32,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reminderTone: 'gentle',
   });
 
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: '1',
-      text: 'Finish design portfolio for internship applications',
-      deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days from now
-      status: 'on-track',
-      progress: 60,
-    },
-    {
-      id: '2',
-      text: 'Study for economics final exam',
-      deadline: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
-      status: 'at-risk',
-      progress: 30,
-    },
-    {
-      id: '3',
-      text: 'Complete morning workout routine 3x this week',
-      deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days from now
-      status: 'on-track',
-      progress: 75,
-    },
-  ]);
-
-  const [habits, setHabits] = useState<Habit[]>([
-    {
-      id: 'h1',
-      name: 'Morning journaling',
-      emoji: '📝',
-      frequency: 'daily',
-      completedToday: true,
-      streak: 7,
-      reminderTime: '8:00 AM',
-    },
-    {
-      id: 'h2',
-      name: 'Drink 8 glasses of water',
-      emoji: '💧',
-      frequency: 'daily',
-      completedToday: false,
-      streak: 12,
-      reminderTime: '10:00 AM',
-    },
-    {
-      id: 'h3',
-      name: 'Read for 30 minutes',
-      emoji: '📚',
-      frequency: 'daily',
-      completedToday: true,
-      streak: 3,
-      reminderTime: '9:00 PM',
-    },
-  ]);
-
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [currentGoal, setCurrentGoal] = useState<Partial<Goal> | null>(null);
-  const [points, setPoints] = useState(1250);
-  const [streak, setStreak] = useState(7);
+  const [points, setPoints] = useState(0);
+  const [streak, setStreak] = useState(0);
 
   const updateGoal = (goalId: string, updates: Partial<Goal>) => {
     setGoals(goals.map((g) => (g.id === goalId ? { ...g, ...updates } : g)));
@@ -108,7 +56,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return h;
       })
     );
-    setPoints(points + 10);
   };
 
   const addHabit = (habit: Omit<Habit, 'id' | 'completedToday' | 'streak'>) => {
@@ -137,7 +84,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const confirmCommitment = (goal: Goal) => {
     setGoals([...goals, goal]);
-    setPoints(points + 50);
   };
 
   return (

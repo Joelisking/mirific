@@ -12,29 +12,19 @@ import type { RootState } from '../store';
 // iOS simulator with Expo Go: use computer's local IP
 // Android emulator: needs 10.0.2.2
 // Physical device: needs your computer's IP (update this for your network)
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  
   if (__DEV__) {
-    if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:3001';
-    }
-    // For iOS simulator with Expo Go, use local network IP
-    // This allows Expo Go to reach your backend
+    if (Platform.OS === 'android') return 'http://10.0.2.2:3001';
     return 'http://192.168.86.29:3001';
   }
-  // Production URL (update this when deploying)
-  return 'https://your-production-api.com';
+  // Set EXPO_PUBLIC_API_URL in your .env for production
+  return '';
 };
 
 const BASE_URL = getBaseUrl();
-
-// Debug: Log the base URL being used
-console.log('🌐 API Base URL:', BASE_URL);
-console.log('📱 Platform:', Platform.OS);
-console.log('🔧 __DEV__:', __DEV__);
 
 // Get Clerk token function - will be set by app
 let getClerkToken: (() => Promise<string | null>) | null = null;

@@ -5,6 +5,7 @@ import { theme } from "@/constants/theme";
 import { useApp } from '@/contexts/AppContext';
 import { analyzeGoalRisk } from '@/lib/ai';
 import { usePatchApiGoalsByIdMutation } from '@/lib/redux';
+import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -14,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CheckInScreen() {
   const router = useRouter();
-  const { currentGoal, setPoints, points } = useApp();
+  const { currentGoal } = useApp();
+  const { getToken } = useAuth();
   const [updateGoalApi, { isLoading }] = usePatchApiGoalsByIdMutation();
 
   const [progress, setProgress] = useState(currentGoal?.progress || 0);
@@ -62,12 +64,13 @@ export default function CheckInScreen() {
             if (daysLeft !== null && daysLeft < 7 && progress < 50) derivedStatus = 'at-risk';
 
             // AI Enhancement
+            const token = await getToken();
             const aiResult = await analyzeGoalRisk({
               text: currentGoal.text || '',
               deadline: currentGoal.deadline,
               progress: progress,
               status: derivedStatus
-            });
+            }, token ?? '');
 
             status = aiResult;
           } catch (e) {
@@ -89,10 +92,6 @@ export default function CheckInScreen() {
           status: status
         }
       }).unwrap();
-
-      if (status === 'completed') {
-        setPoints(points + 100);
-      }
 
       router.back();
     } catch (error) {

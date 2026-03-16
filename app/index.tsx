@@ -10,15 +10,13 @@ export default function Index() {
   const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const [checkProfile, { isLoading: isCheckingProfile }] = useLazyGetApiClerkProfileQuery();
-  const { setUserProfile } = useApp();
+  const { setUserProfile, setPoints, setStreak } = useApp();
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       checkProfile().unwrap()
         .then((response) => {
           if (response.user) {
-            // Hydrate AppContext with the fetched profile
-            // Map API User type (optional fields) to AppContext UserProfile type (required fields)
             setUserProfile({
               name: response.user.name || '',
               goals: response.user.goals || [],
@@ -26,6 +24,8 @@ export default function Index() {
               communicationMode: response.user.communicationMode || 'text',
               reminderTone: response.user.reminderTone || 'gentle',
             });
+            setPoints(response.user.points ?? 0);
+            setStreak(response.user.streak ?? 0);
             router.replace('/home');
           } else {
             // No user in response, treat as new user
