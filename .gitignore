@@ -42,4 +42,10 @@ app-example
 # generated native folders
 /ios
 /android
-.env
+
+# Claude Code
+.claude/
+
+# logs
+logs/
+*.log
